@@ -1,0 +1,52 @@
+FRONTIER FOR MISTER - INSTALLATION
+=================================
+
+Package date: @BUILD_DATE@.
+
+1. Copy the CONTENTS of the SD folder to the root of your MiSTer SD card.
+   Replace the package files if you are upgrading an older installation.
+2. On MiSTer, select F12 -> Scripts -> frontier_install.
+   It saves the original MiSTer, keeps your settings and protects Frontier
+   from updates. MiSTer then reboots.
+3. With a CRT on the VGA output of the I/O board, also run
+   F12 -> Scripts -> frontier_crt: Frontier on the CRT too (HD on HDMI and
+   240p on the CRT at the same time). Run it again to turn it off; it is also
+   in Frontier Settings -> CRT output. The old frontier_crt_menu script is no
+   longer needed.
+
+Without this package, through update_all: copy downloader_frontiermr.ini
+(https://github.com/ElFDA/FrontierMr/releases/latest/download/downloader_frontiermr.ini)
+to the root of the SD card, run update_all, then steps 2 and 3.
+
+Use update_all as usual afterwards. No terminal commands, INI edits or
+reinstallation after each update are needed. Other cores and the official
+menu keep updating. If an update puts the official MiSTer back, Frontier's
+returns at the next reboot (frontier/guard.sh). update_all also downloads
+the new versions of Frontier.
+
+UPGRADING AN OLDER FRONTIER PACKAGE
+  Copy the new SD folder and run frontier_install again. The official
+  menu.rbf comes back in the root (at the latest with the next update_all):
+  Frontier's now lives in frontier/bin.
+  Your settings, favorites, lists and downloaded media are kept.
+
+SWITCH THE INTERFACE ON OR OFF
+  Run F12 -> Scripts -> frontier_on_off. MiSTer stays Frontier's.
+
+BACK TO THE OFFICIAL FIRMWARE
+  Run F12 -> Scripts -> frontier_uninstall. It stops the protection,
+  removes Frontier from the updates and puts back the original MiSTer
+  (MiSTer.orig); without it the next update_all brings the official MiSTer.
+  Frontier's media and settings are kept for a later installation.
+
+IF INSTALLATION STOPS
+  Do not run another updater during installation. If update protection
+  cannot be configured, installation stops before replacing MiSTer.
+  Send the error to the package maintainer; details are recorded in
+  frontier/update_protection.log.
+
+FULL GUIDE
+  See frontier/README.txt on the SD after installation (UPDATES section).
+
+This is an early release: please report problems at
+https://github.com/ElFDA/FrontierMr/issues

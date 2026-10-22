@@ -80,4 +80,20 @@ char* video_get_core_mode_name(int with_vrefresh = 1);
 
 void dbg_draw_cursor(int x, int y);
 
+// FRONTIER
+volatile uint32_t *video_fe_page(int page, int *w, int *h);
+int video_fe_cur_page();
+void video_fe_show(int page);
+int video_fe_bg_gen();
+void video_fe_crt(int on);
+void video_fe_interlace(int on);   // CRT pages 640x480 interlaced (with the "fi" menu.rbf)
+// picture on the CRT moved right by px: done by Frontier's menu.rbf in steps
+// of 4 (-32..28); returns the pixels it moves (0 with another menu.rbf)
+int video_fe_hpos(int px);
+int video_fe_main_crt();           // the menu pages are the 15 kHz picture (direct_video, crt=1)
+// with Frontier's menu.rbf: pages 0/1 for the CRT (0 if not available)
+volatile uint32_t *video_fe_crt_page(int page, int *w, int *h);
+int video_fe_crt_cur_page();
+void video_fe_crt_show(int page);
+
 #endif // VIDEO_H

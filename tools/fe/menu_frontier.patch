@@ -1,0 +1,158 @@
+diff --git a/menu.sv b/menu.sv
+index a6ab144..bb9f956 100644
+--- a/menu.sv
++++ b/menu.sv
+@@ -60,7 +60,7 @@ assign LED_POWER[0]= FB ? led[2] : act_cnt2[26] ? act_cnt2[25:18] > act_cnt2[7:0
+ localparam CONF_STR = {
+ 	"MENU;UART31250,MIDI;",
+ 	"-  ;",
+-	"V,v",`BUILD_DATE 
++	"V,v",`BUILD_DATE,"fi"
+ };
+ 
+ wire forced_scandoubler;
+@@ -355,6 +355,16 @@ wire PAL = status[4];
+ wire FB  = status[5];
+ wire [2:0] led = status[8:6];
+ 
++// FRONTIER: status[11] interlaced output of the second frame buffer (see below):
++// 240 lines per field, the two fields alternate even and odd rows of the frame
++wire il_en = status[11] & ~forced_scandoubler;
++reg  fld = 0;   // field being drawn (0 = even rows, 1 = odd rows)
++
++// FRONTIER: status[15:12] horizontal position of the picture, signed, in steps of
++// 4 pixels (positive = to the right): the sync moves the other way in the blanking
++wire signed [3:0] hpos = status[15:12];
++reg   [9:0] hs_start = 672;
++
+ reg   [9:0] hc;
+ reg   [9:0] vc;
+ reg   [9:0] vvc;
+@@ -376,6 +386,9 @@ always @(posedge CLK_VIDEO) begin
+ 			if(vc == (PAL ? (forced_scandoubler ? 623 : 311) : (forced_scandoubler ? 523 : 261))) begin 
+ 				vc <= 0;
+ 				vvc <= vvc + 9'd6;
++				// FRONTIER: interlaced, the odd field starts half a line later
++				fld <= il_en & ~fld;
++				if(il_en && !fld) hc <= PAL ? 10'd400 : 10'd397;
+ 			end else begin
+ 				vc <= vc + 1'd1;
+ 			end
+@@ -397,7 +410,10 @@ always @(posedge CLK_VIDEO) begin
+ 	if (hc == 640) HBlank <= 1;
+ 		else if (hc == 0) HBlank <= 0;
+ 
+-	if (hc == 672) begin
++	// FRONTIER: new position taken at the start of a frame
++	if (ce_pix && !hc && !vc) hs_start <= 10'd672 - {{4{hpos[3]}}, hpos, 2'b00};
++
++	if (hc == hs_start) begin
+ 		HSync <= 1;
+ 
+ 		if(PAL) begin
+@@ -416,7 +432,7 @@ always @(posedge CLK_VIDEO) begin
+ 		end
+ 	end
+ 	
+-	if (hc == 736) HSync <= 0;
++	if (hc == hs_start + 10'd64) HSync <= 0;
+ end
+ 
+ reg  [7:0] cos_out;
+@@ -428,6 +444,27 @@ wire [7:0] comp_v = (cos_g >= rnd_c) ? {cos_g - rnd_c, 2'b00} : 8'd0;
+ wire [23:0] fb_rgb;
+ wire        fb_active;
+ 
++// FRONTIER: second frame buffer for the analog output, so HDMI (scaler, LFB_*) and
++// the CRT can show different resolutions at the same time.
++// status[9]      enable: console_out reads FB2 instead of the scaler's frame buffer
++// status[10]     page: FB2 base + page * 2MB (double buffering, flipped atomically)
++// status[11]     interlaced: FB2 is 640x(2*out_h), each field shows every other row
++// status[15:12]  horizontal position of the picture (see hpos above)
++// status[31:16]  FB2 base >> 16; 640 pixels wide, 32bpp, stride 2560, as high as the output
++// Parameters are taken once per frame, after the last visible line has been fetched.
++wire  [9:0] out_h = PAL ? (forced_scandoubler ? 10'd576 : 10'd288) : (forced_scandoubler ? 10'd480 : 10'd240);
++reg         fb2 = 0;
++reg         fb2_il = 0;
++reg  [31:0] fb2_base;
++
++always @(posedge CLK_VIDEO) begin
++	if(ce_pix && hc == 700 && vc == out_h - 1'd1) begin
++		fb2      <= status[9];
++		fb2_il   <= status[11];
++		fb2_base <= {status[31:16], 16'd0} + {status[10], 21'd0};
++	end
++end
++
+ console_out console_out
+ (
+ 	.clk_sys(clk_sys),
+@@ -441,17 +478,20 @@ console_out console_out
+ 	.ddr_idle(fb_idle),
+ 
+ 	.fb_fmt(LFB_FMT),
+-	.fb_base(LFB_BASE),
+-	.fb_width(LFB_WIDTH),
+-	.fb_height(LFB_HEIGHT),
+-	.fb_stride(LFB_STRIDE),
++	.fb_base(fb2 ? fb2_base : LFB_BASE),
++	.fb_width(fb2 ? 12'd640 : LFB_WIDTH),
++	.fb_height(fb2 ? (fb2_il ? {1'b0, out_h, 1'b0} : {2'b00, out_h}) : LFB_HEIGHT),
++	.fb_stride(fb2 ? 14'd2560 : LFB_STRIDE),
+ 
+ 	.clk_vid(CLK_VIDEO),
+ 	.ce_pix(ce_pix),
+ 	.show(FB),
+ 	.hc(hc),
+ 	.vc(vc),
+-	.height(PAL ? (forced_scandoubler ? 10'd576 : 10'd288) : (forced_scandoubler ? 10'd480 : 10'd240)),
++	.fld(fld),
++	.il(fb2 & fb2_il & ~forced_scandoubler),
++	.hhalf(PAL ? 10'd400 : 10'd397),
++	.height(out_h),
+ 	.rgb(fb_rgb),
+ 	.active(fb_active)
+ );
+diff --git a/rtl/console_out.sv b/rtl/console_out.sv
+index 8b50491..8df9eba 100644
+--- a/rtl/console_out.sv
++++ b/rtl/console_out.sv
+@@ -24,6 +24,9 @@ module console_out
+ 	input       [9:0] hc,
+ 	input       [9:0] vc,
+ 	input       [9:0] height,
++	input             fld,    // interlaced: field being drawn (0 even rows, 1 odd rows)
++	input             il,     // interlaced: fb_height is the frame, height the lines per field
++	input       [9:0] hhalf,  // hc at which the odd field starts (half line)
+ 	output reg [23:0] rgb,
+ 	output reg        active = 0
+ );
+@@ -42,11 +45,11 @@ always @(posedge clk_vid) begin
+ 	h      <= fb_height;
+ 	out_h  <= height;
+ 	cols   <= w[9:0];
+-	lines  <= h[9:0];
++	lines  <= il ? h[10:1] : h[9:0];
+ 	left   <= (WIDTH[9:0] - cols) >> 1;
+ 	top    <= (out_h - lines) >> 1;
+ 	show_s <= {show_s[0], show};
+-	active <= show_s[1] && fmt[2:0] == 3'b110 && w && h && w <= WIDTH && h <= out_h;
++	active <= show_s[1] && fmt[2:0] == 3'b110 && w && h && w <= WIDTH && lines <= out_h;
+ end
+ 
+ reg       req_t = 0;
+@@ -56,10 +59,12 @@ reg       req_bank;
+ always @(posedge clk_vid) begin
+ 	reg [9:0] ny;
+ 
+-	if(ce_pix && !hc && active && (vc + 1'd1 < out_h || vc == out_h)) begin
++	// the odd field starts on its half line (hc == hhalf), where hc does not wrap
++	if(ce_pix && (fld && !vc ? hc == hhalf : !hc) && active && (vc + 1'd1 < out_h || vc == out_h)) begin
+ 		ny = (vc == out_h) ? 10'd0 : vc + 1'd1;
+ 		if(ny >= top && ny - top < lines) begin
+-			req_line <= ny - top;
++			// interlaced: row 2*line + field of the frame (the next field when ny wraps to 0)
++			req_line <= il ? {ny[8:0] - top[8:0], (vc == out_h) ? ~fld : fld} : ny - top;
+ 			req_bank <= ny[0];
+ 			req_t    <= ~req_t;
+ 		end

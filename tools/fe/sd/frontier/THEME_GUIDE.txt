@@ -1,0 +1,676 @@
+THEME GUIDE - rebuilding the "City Pop" theme with the theme editor
+===================================================================
+
+This guide makes, step by step, a copy of the City Pop theme
+(themes/citypop: Japanese pop of the bubble era, after bubblism.jp) with
+the theme editor. At the end you have your own theme, with the same look,
+that you can change as you like. Italian version: GUIDA_TEMA_ita.txt.
+
+What a theme is made of:
+  theme.ini       the list, 16:9 screens (HDMI)
+  theme_43.ini    the list, 4:3 screens (CRT 640x240)
+  detail.ini      the detail screen (X on the gamepad), 16:9
+  detail_43.ini   the detail screen, 4:3
+  img/            pictures: background, selection bar, year tag
+  fonts/          TTF fonts
+  media/systems/  pictures of the main screen (optional)
+The .ini files place the elements (texts, list, pictures) on the screen.
+The editor writes the .ini files; the pictures are made with a paint
+program (or with a script, see STEP 1).
+
+Coordinates are in "base" units: 1280x720 in the 16:9 files, 960x720 in
+the 4:3 ones; Frontier scales them to the real screen. On the CRT
+(240 lines) 3 units of height are one line: City Pop keeps rows and
+panels on multiples of 3.
+
+
+STEP 0 - WHAT YOU NEED
+  - a PC with Chrome or Edge (they can save straight into the folder;
+    with other browsers use "Download .ini" and copy the files yourself)
+  - the repository of Frontier: the editor is tools/fe/theme_editor.html
+    (open it with a double click, it works offline)
+  - the pictures and fonts of City Pop: from tools/fe/sd/frontier/themes/
+    or from /media/fat/frontier/themes/ on the MiSTer
+
+
+STEP 1 - THE FOLDER OF THE THEME
+  Make a folder named like the theme, e.g. mycitypop, with:
+
+    mycitypop/
+      img/            copy all the files of themes/citypop/img/
+      fonts/          copy BebasNeue-Regular.ttf (titles),
+                      PTSansNarrow-Bold.ttf (texts), DejaVuSans-Bold.ttf
+                      (the stars) and their LICENSE-*.txt from
+                      themes/simple/fonts/
+      media/systems/  copy the files of themes/citypop/media/systems/
+
+  City Pop itself takes the fonts from ../simple/fonts/, but the editor
+  only sees the files inside the folder you open: with the fonts in
+  fonts/ you see them in the editor, and the theme works on the MiSTer too.
+
+  The pictures come from a script (tools/fe/themegen/citypop_assets.py,
+  Python 3 with Pillow and numpy). To draw them yourself, these are the
+  sizes and the positions (colours #RRGGBB):
+
+    img/bg.png 1280x720 (img/bg_43.png 960x720), background of the list
+      - fill #F4D5D5; dashed grid #FFE3F9: vertical lines 3 px wide every
+        96 px from x=48, horizontal lines 3 px tall every 60 px from y=30,
+        dashes of 18 px with gaps of 3 px
+      - dots of radius 3 every 12 px: pink #FFA3D9 in x 14-150, y 104-240;
+        mint #69D2BA in x 1150-1274, y 86-206 (4:3: x 830-954)
+      - header: blue #3C6BB1 slab with corners (26,92) (40,30) (176,4)
+        (160,70), mint #69D2BA slab over it (20,88) (34,26) (170,0)
+        (154,66), glossy pink bubble 84 px wide at 36,8
+      - panels: light blue shadow #7AA1DB moved 6 px right and down,
+        paper #FAF2F1, mint border 16 px wide
+          list:     26,114 to 616,632 (4:3: to 466,632), border on the left
+          picture:  652,114 to 1254,443 (4:3: 494,114 to 934,443), border
+                    on the right
+      - help bar: mint 40,648 to 1240,699 (4:3: to 920,699), shadow as above
+    img/detail.png 1280x720 (img/detail_43.png 960x720), detail screen
+      - as bg.png, but the picture panel is on the left, 26,114 to 616,443
+        (4:3: to 466,443), border on the left, and the text panel on the
+        right, 652,114 to 1254,632 (4:3: 494,114 to 934,632), border on the
+        right; mint dots in x 1150-1274, y 86-206 (4:3: x 830-954)
+    img/sel.png 574x51 (img/sel_43.png 424x51), selection bar, transparent:
+      light blue #7AA1DB rectangle 5,6 to 573,47 (4:3: to 423,47), mint
+      rectangle 0,3 to 567,44 (4:3: to 417,44) over it
+    img/tag.png 132x60, tag of the year, transparent: light blue polygon
+      (6,6) (126,6) (126,58) (20,49), pink #FFA3D9 polygon (12,0) (132,0)
+      (132,52) (26,43) over it
+    media/systems/<key>.png 640x480: the cards of the main screen, key =
+      favorites, arcade, computer, console, handheld, other, mister
+
+
+STEP 2 - OPEN THE FOLDER IN THE EDITOR
+  1. Open theme_editor.html and press "Open folder": choose mycitypop and
+     allow the editor to change it.
+  2. There is no theme.ini yet: the editor says so and starts from a new
+     theme with some basic elements. The left panel says how many
+     pictures and fonts it found (7 pictures in img/, 7 cards, 3 fonts).
+
+  How the editor works:
+  - left: the elements. The one on top is drawn above the others. Click
+    an element (in the list or on the screen) to change it on the right;
+    "[theme]" holds the settings of the whole screen.
+  - "Add" adds an element of the chosen type after the selected one;
+    "Delete" removes the selected one; the arrows change the order.
+  - right: the keys of the element. Every key of this guide goes into the
+    field with the same name; "rect" is x, y, width, height. A key that is
+    not in the guide must stay EMPTY: "Add" fills some keys with examples
+    (e.g. transition=fade 250 on the pictures, sel_background on the list),
+    clear them.
+  - a key without a field goes into "Other keys" as key=value.
+  - "Undo" (Ctrl+Z) undoes the last change.
+
+
+STEP 3 - THE LIST, 16:9 (theme.ini)
+  1. Select each element of the new theme and press "Delete", until only
+     [theme] is left.
+  2. Click [theme] and fill in its keys:
+
+  [theme]
+    name=City Pop
+    base=1280x720
+    background=img/bg.png
+    background_fit=stretch
+    background_color=#F4D5D5
+    font=fonts/PTSansNarrow-Bold.ttf
+    size=32
+    color=#212121
+
+  3. Add the elements in this order, each with "Add" (choose its type,
+     the "type" key below, in the menu next to "Add"), then give it the
+     name and the keys below. Keep the last added element selected: the
+     next one goes after it, so it is drawn above it (and above it in the
+     editor list). The order matters where they overlap: the picture above
+     its placeholder text, the year above its tag, the letter above its
+     background.
+
+  [title]
+    type=text
+    rect=190,8,834,90
+    text=${title}
+    font=fonts/BebasNeue-Regular.ttf
+    size=72
+    color=#69D2BA
+    shadow=#3C6BB1
+    shadow_offset=4
+    scroll=horizontal
+
+  [position]
+    type=text
+    rect=1030,14,224,84
+    text=${pos}
+    font=fonts/BebasNeue-Regular.ttf
+    size=44
+    color=#3C6BB1
+    shadow=#7AA1DB
+    shadow_offset=3
+    align=right
+
+  [list]
+    type=list
+    rect=42,117,574,510
+    row_height=51
+    padding=18
+    color=#212121
+    dir_color=#3C6BB1
+    tag_color=#EC76B2
+    tag_dir=>
+    tag_up=<
+    sel_image=img/sel.png
+    sel_color=#002967
+    sel_scroll=1
+    scrollbar_width=4
+    scrollbar_color=#EAD9D9
+    scrollbar_knob=#FFA3D9
+    empty_text=No games
+
+  [no_image]
+    type=text
+    rect=662,124,566,310
+    text=${game.title}
+    ifnot=${media.system}${media.snap}${media.title}${media.box}
+    font=fonts/BebasNeue-Regular.ttf
+    size=60
+    color=#E2CACA
+    align=center
+    wrap=1
+    layout=media
+
+  [image]
+    type=image
+    rect=662,124,566,310
+    src=${media.system}|${media.snap}|${media.title}|${media.box}
+    fit=contain
+    layout=media
+
+  [text_system]
+    type=image
+    rect=662,124,566,310
+    src=${media.system}
+    fit=contain
+    ifnot=${game.desc}
+    layout=text
+
+  [text_desc]
+    type=text
+    rect=670,180,550,246
+    text=${game.desc}
+    size=28
+    color=#212121
+    wrap=1
+    valign=top
+    scroll=vertical
+    layout=text
+
+  [favorite]
+    type=text
+    rect=662,124,48,48
+    text=★
+    font=fonts/DejaVuSans-Bold.ttf
+    size=40
+    color=#FFA3D9
+    shadow=#3C6BB1
+    shadow_offset=3
+    align=center
+    if=${game.favorite}
+
+  [year_tag]
+    type=image
+    rect=1122,96,132,60
+    src=img/tag.png
+    if=${game.year}
+
+  [year]
+    type=text
+    rect=1142,96,104,52
+    text=${game.year}
+    font=fonts/BebasNeue-Regular.ttf
+    size=44
+    color=#3C6BB1
+    align=right
+
+  [letter_shadow]
+    type=rect
+    rect=896,196,110,110
+    color=#7AA1DB
+    if=${jump}
+
+  [letter_back]
+    type=rect
+    rect=890,190,110,110
+    color=#69D2BA
+    if=${jump}
+
+  [letter]
+    type=text
+    rect=890,190,110,110
+    text=${jump}
+    font=fonts/BebasNeue-Regular.ttf
+    size=96
+    color=#002967
+    align=center
+    if=${jump}
+
+  [name]
+    type=text
+    rect=652,452,602,62
+    text=${game.title}
+    font=fonts/BebasNeue-Regular.ttf
+    size=60
+    color=#3C6BB1
+    shadow=#7AA1DB
+    shadow_offset=3
+    scroll=horizontal
+
+  [maker]
+    type=text
+    rect=652,514,602,36
+    text=${game.developer}
+    color=#585858
+    scroll=horizontal
+
+  [genre]
+    type=text
+    rect=652,550,602,36
+    text=${game.genre}
+    color=#747474
+    scroll=horizontal
+
+  [stars]
+    type=text
+    rect=652,588,602,40
+    text=${game.stars}
+    font=fonts/DejaVuSans-Bold.ttf
+    size=28
+    color=#EC76B2
+
+  [help]
+    type=text
+    rect=60,648,1160,51
+    text=A PLAY    X DETAILS    B BACK    HOLD X FAVORITE
+    font=fonts/BebasNeue-Regular.ttf
+    size=40
+    color=#002967
+    ifnot=${message}
+
+  [message]
+    type=text
+    rect=60,648,1160,51
+    text=${message}
+    font=fonts/BebasNeue-Regular.ttf
+    size=40
+    color=#FFFFFF
+    shadow=#3C6BB1
+    shadow_offset=3
+    if=${message}
+
+  What the elements do:
+    title, position   name of the folder and position in the list, top
+    list              the games; the mint bar is sel_image
+    no_image, image   the picture of the game (or of the system, on the
+                      main screen); without a picture, the name in pale pink
+    text_system, text_desc
+                      with Text layout ON (layout=text) in place of the
+                      picture: the description of the game (or of the
+                      system), else the picture of the theme; no_image and
+                      image have layout=media (only with it OFF)
+    favorite          star on the picture for the games in the favorites
+    year_tag, year    pink tag with the year
+    letter_*          the letter chosen with L/R, for a second
+    name, maker...    data of the game under the picture
+    help, message     help line on the mint bar; the messages ("Added to
+                      favorites"...) take its place for a moment
+
+  4. "Save to folder": the editor writes theme.ini in mycitypop.
+
+
+STEP 4 - THE LIST, 4:3 (theme_43.ini)
+  1. With "Variant" on theme.ini press "Make 4:3": the editor makes
+     theme_43.ini with base 960x720, x and widths scaled to 3/4 (the texts
+     keep their size) and shows it.
+  2. Scaled, the elements no longer match the 4:3 pictures: change these
+     keys (the others are already right):
+
+  [theme]
+    background=img/bg_43.png
+  [title]
+    rect=190,8,514,90
+  [position]
+    rect=710,14,224,84
+  [list]
+    rect=42,117,424,510
+    sel_image=img/sel_43.png
+  [no_image]
+    rect=504,124,404,310
+  [image]
+    rect=504,124,404,310
+  [text_system]
+    rect=504,124,404,310
+  [text_desc]
+    rect=510,178,392,250
+  [favorite]
+    rect=504,124,48,48
+  [year_tag]
+    rect=802,96,132,60
+  [year]
+    rect=822,96,104,52
+  [letter_shadow]
+    rect=657,196,110,110
+  [letter_back]
+    rect=651,190,110,110
+  [letter]
+    rect=651,190,110,110
+  [name]
+    rect=494,452,440,62
+  [maker]
+    rect=494,514,440,36
+  [genre]
+    rect=494,550,440,36
+  [stars]
+    rect=494,588,440,40
+  [help]
+    rect=60,648,840,51
+    text=A PLAY   X DETAILS   B BACK   HOLD X FAV
+  [message]
+    rect=60,648,840,51
+
+  3. "Save to folder". To see it as on the CRT tick "240p preview".
+
+
+STEP 5 - THE DETAIL SCREEN, 16:9 (detail.ini)
+  1. Set "Variant" to theme.ini and press "Make detail": the editor makes
+     detail.ini as a copy of theme.ini and shows it.
+  2. The detail screen has other elements. Delete position, list,
+     text_system, text_desc, letter_shadow, letter_back, letter and name.
+  3. Change the elements left as in the blocks below ([theme] too): a key
+     of the copy which is not in its block must be emptied.
+  4. Add the missing ones, each after the element given here, so that the
+     order is that of the blocks:
+       video            after image
+       players          after genre
+       description, text_desc, versions_title, versions_pos, versions
+                        after stars, one after the other
+     "versions" is a list: choose "list" in the menu next to "Add".
+
+  [theme]
+    name=City Pop
+    base=1280x720
+    background=img/detail.png
+    background_fit=stretch
+    background_color=#F4D5D5
+    font=fonts/PTSansNarrow-Bold.ttf
+    size=32
+    color=#212121
+
+  [title]
+    type=text
+    rect=190,8,1064,90
+    text=${game.title}
+    font=fonts/BebasNeue-Regular.ttf
+    size=72
+    color=#69D2BA
+    shadow=#3C6BB1
+    shadow_offset=4
+    scroll=horizontal
+
+  [no_image]
+    type=text
+    rect=42,124,564,310
+    text=${game.title}
+    ifnot=${media.snap}${media.title}${media.box}
+    font=fonts/BebasNeue-Regular.ttf
+    size=60
+    color=#E2CACA
+    align=center
+    wrap=1
+    layout=media
+
+  [image]
+    type=image
+    rect=42,124,564,310
+    src=${media.snap}|${media.title}|${media.box}
+    fit=contain
+    layout=media
+
+  [video]
+    type=video
+    rect=42,124,564,310
+    src=${media.video}
+    fit=contain
+    delay=800
+    layout=media
+
+  [favorite]
+    type=text
+    rect=42,124,48,48
+    text=★
+    font=fonts/DejaVuSans-Bold.ttf
+    size=40
+    color=#FFA3D9
+    shadow=#3C6BB1
+    shadow_offset=3
+    align=center
+    if=${game.favorite}
+
+  [year_tag]
+    type=image
+    rect=484,96,132,60
+    src=img/tag.png
+    if=${game.year}
+
+  [year]
+    type=text
+    rect=504,96,104,52
+    text=${game.year}
+    font=fonts/BebasNeue-Regular.ttf
+    size=44
+    color=#3C6BB1
+    align=right
+
+  [maker]
+    type=text
+    rect=26,452,590,44
+    text=${game.developer}
+    font=fonts/BebasNeue-Regular.ttf
+    size=44
+    color=#3C6BB1
+    shadow=#7AA1DB
+    shadow_offset=3
+    scroll=horizontal
+
+  [genre]
+    type=text
+    rect=26,498,590,36
+    text=${game.genre}
+    color=#585858
+    scroll=horizontal
+
+  [players]
+    type=text
+    rect=26,534,590,36
+    text=${game.players} players
+    if=${game.players}
+    color=#747474
+
+  [stars]
+    type=text
+    rect=26,572,590,40
+    text=${game.stars}
+    font=fonts/DejaVuSans-Bold.ttf
+    size=28
+    color=#EC76B2
+
+  [description]
+    type=text
+    rect=662,126,566,300
+    text=${game.desc}
+    size=28
+    color=#212121
+    wrap=1
+    valign=top
+    scroll=vertical
+    layout=media
+
+  [text_desc]
+    type=text
+    rect=50,180,548,246
+    text=${game.desc}
+    size=28
+    color=#212121
+    wrap=1
+    valign=top
+    scroll=vertical
+    layout=text
+
+  [versions_title]
+    type=text
+    rect=662,432,566,42
+    text=Versions ${versions.status}
+    font=fonts/BebasNeue-Regular.ttf
+    size=38
+    color=#3C6BB1
+
+  [versions_pos]
+    type=text
+    rect=662,432,566,42
+    text=${pos}
+    font=fonts/BebasNeue-Regular.ttf
+    size=38
+    color=#EC76B2
+    align=right
+
+  [versions]
+    type=list
+    rect=652,477,574,153
+    row_height=51
+    padding=18
+    color=#212121
+    sel_image=img/sel.png
+    sel_color=#002967
+    sel_scroll=1
+    scrollbar_width=4
+    scrollbar_color=#EAD9D9
+    scrollbar_knob=#FFA3D9
+
+  [help]
+    type=text
+    rect=60,648,1160,51
+    text=A PLAY    UP/DOWN VERSION    B/X BACK    HOLD X FAVORITE
+    font=fonts/BebasNeue-Regular.ttf
+    size=40
+    color=#002967
+    ifnot=${message}
+
+  [message]
+    type=text
+    rect=60,648,1160,51
+    text=${message}
+    font=fonts/BebasNeue-Regular.ttf
+    size=40
+    color=#FFFFFF
+    shadow=#3C6BB1
+    shadow_offset=3
+    if=${message}
+
+  More variables of the detail screen:
+    ${game.desc}         description of the game
+    ${versions.status}   "searching for versions..." while they are counted
+    ${pos}               selected version / number of versions
+    the list of a detail.ini shows the versions of the game (regions,
+    arcade alternatives); A starts the selected one.
+
+  5. "Save to folder".
+
+
+STEP 6 - THE DETAIL SCREEN, 4:3 (detail_43.ini)
+  1. With "Variant" on detail.ini press "Make 4:3", then change:
+
+  [theme]
+    background=img/detail_43.png
+  [title]
+    rect=190,8,744,90
+  [no_image]
+    rect=42,124,414,310
+  [image]
+    rect=42,124,414,310
+  [video]
+    rect=42,124,414,310
+  [favorite]
+    rect=42,124,48,48
+  [year_tag]
+    rect=334,96,132,60
+  [year]
+    rect=354,96,104,52
+  [maker]
+    rect=26,452,440,44
+  [genre]
+    rect=26,498,440,36
+  [players]
+    rect=26,534,440,36
+  [stars]
+    rect=26,572,440,40
+  [description]
+    rect=504,126,404,300
+  [text_desc]
+    rect=48,178,402,250
+  [versions_title]
+    rect=504,432,404,42
+  [versions_pos]
+    rect=504,432,404,42
+  [versions]
+    rect=494,477,424,153
+    sel_image=img/sel_43.png
+  [help]
+    rect=60,648,840,51
+    text=A PLAY   B/X BACK   HOLD X FAVORITE
+  [message]
+    rect=60,648,840,51
+
+  2. "Save to folder".
+
+
+STEP 7 - ON THE MISTER
+  1. Copy the folder mycitypop to /media/fat/frontier/themes/ (network
+     share, FTP/SCP or the SD card in the PC).
+  2. In Frontier choose Frontier Settings (last entry of the main screen) -> "Theme" and
+     press A until the theme is "City Pop" again (the name is in [theme],
+     change it to tell them apart), or write theme=mycitypop in /media/fat/frontier/frontier.ini
+     and press F5 (keyboard) in Frontier.
+  3. To change it later: edit in the editor, "Save to folder", copy the
+     changed files, F5.
+
+  Import .ini: loads .ini files into the editor without opening their
+  folder. Open mycitypop, then "Import .ini" and choose the files of
+  themes/citypop (theme.ini, detail.ini...): you see the finished theme
+  with your pictures, and you can compare it with yours. Files named
+  theme.ini, theme_43.ini, detail.ini, detail_43.ini go into their
+  variant, a file with another name into the current one. The fonts of
+  the imported files are ../simple/fonts/...: write fonts/... to see them.
+
+
+STEP 8 - THE DARK AND BLUE VARIANTS
+  City Pop Dark (themes/citypop_dark) and City Pop Blue
+  (themes/citypop_blue) have the same elements and other colours: their
+  pictures are made with other colours by the same script, and their .ini
+  files are those of City Pop with these changes (in all four files):
+
+  City Pop Dark (the dark mode of bubblism.jp)
+    pictures: background #212121, grid #553C50, panels #2B2B2B
+    [theme] background_color=#212121
+    every color=#212121 -> #DCDCDC (text)
+    color=#3C6BB1 -> #7AA1DB and shadow=#7AA1DB -> #3C6BB1, except in
+      [year] (on the pink tag)
+    color=#585858 -> #A8A8A8, color=#747474 -> #8F8F8F
+    color=#E2CACA -> #3A3A3A (no_image), scrollbar_color=#3A3A3A
+
+  City Pop Blue (background of the blue of the titles)
+    pictures: background #3C6BB1, grid #5682C4, panels #F5F7FF, shadows
+      of the panels and edge of the header slab #002967
+    [theme] background_color=#3C6BB1
+    scrollbar_color=#D8DAE1, no_image color=#D8DAE1
+    on the elements on the background (title, position, name, maker, genre,
+      players, stars): shadow=#002967, color=#3C6BB1 -> #F5F7FF,
+      #585858 -> #DCE6F7, #747474 -> #B4C8EA, #EC76B2 -> #FFA3D9

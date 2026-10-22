@@ -16,6 +16,7 @@
 #include "menu.h"
 #include "shmem.h"
 #include "offload.h"
+#include "fe_update.h" // FRONTIER
 
 #include "fpga_base_addr_ac5.h"
 #include "fpga_manager.h"
@@ -441,6 +442,7 @@ int fpga_load_rbf(const char *name, const char *cfg, const char *xml)
 
 	if(name[0] == '/') strcpy(path, name);
 	else sprintf(path, "%s/%s", !strcasecmp(name, "menu.rbf") ? getStorageDir(0) : getRootDir(), name);
+	if (!strcasecmp(name, "menu.rbf") && fe_update_menu_rbf()) strcpy(path, fe_update_menu_rbf()); // FRONTIER
 
 	int rbf = open(path, O_RDONLY);
 	if (rbf < 0)
@@ -587,6 +589,7 @@ int fpga_get_hdmi_int()
 
 void reboot(int cold)
 {
+	fe_update_guard(); // FRONTIER
 	sync();
 	fpga_core_reset(1);
 
@@ -627,6 +630,7 @@ void app_restart(const char *path, const char *xml, const char *exe)
 
 	offload_stop();
 
+	if (!exe) exe = fe_update_guard(); // FRONTIER
 	const char *appname = exe ? exe : getappname();
 	printf("restarting to %s\n", appname);
 

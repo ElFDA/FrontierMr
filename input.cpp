@@ -36,6 +36,7 @@
 #include "frame_timer.h"
 #include "scaler.h"
 #include "file_io.h"
+#include "frontier.h" // FRONTIER
 
 #define NUMDEV 30
 #define UINPUT_NAME "MiSTer virtual input"
@@ -2951,6 +2952,8 @@ static void input_cb(struct input_event *ev, struct input_absinfo *absinfo, int 
 
 	//check if device is a part of multifunctional device
 	if (!JOYCON_COMBINED(dev) && input[dev].bind >= 0) dev = input[dev].bind;
+
+	if (ev->type == EV_KEY) frontier_panic_key(dev, (ev->code == input[dev].mmap[SYS_BTN_L]) | ((ev->code == input[dev].mmap[SYS_BTN_R]) << 1) | ((ev->code == input[dev].mmap[SYS_BTN_SELECT]) << 2) | ((ev->code == input[dev].mmap[SYS_BTN_START]) << 3), ev->value); // FRONTIER
 
 	if (ev->type == EV_KEY)
 	{
@@ -6346,6 +6349,7 @@ int input_poll(int getchar)
 
 	static bool autofire_cfg_parsed = false;
  	if (!autofire_cfg_parsed) autofire_cfg_parsed = parse_autofire_cfg();
+	frontier_panic_poll(); // FRONTIER
 	static uint32_t joy_mask_prev[NUMPLAYERS] = {};
 
 	add_frame_callback(key_update_frames_held_cb);

@@ -25,6 +25,7 @@ INCLUDE += -I./lib/zstd/lib
 INCLUDE += -I./lib/libchdr/include
 INCLUDE += -I./lib/bluetooth
 INCLUDE += -I./lib/serial_server/library
+INCLUDE += -I./lib/freetype2 # FRONTIER: FreeType 2.13.3 headers (text of the themes)
 
 BUILDDIR = bin
 

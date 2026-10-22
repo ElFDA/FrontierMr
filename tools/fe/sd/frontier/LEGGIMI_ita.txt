@@ -1,0 +1,712 @@
+FRONTIER per MiSTer - guida rapida (italiano)
+=============================================
+
+Versione italiana di README.txt (quella ufficiale e' in inglese).
+L'interfaccia di Frontier e' in inglese: qui i nomi delle voci e degli
+avvisi sono scritti come compaiono sullo schermo.
+
+Frontier sostituisce la schermata di scelta dei core del menu. Tutto il
+resto del MiSTer funziona come prima.
+Guide passo passo (scraper e account ScreenScraper, liste, quale versione di
+un gioco parte), in italiano i file *_ita.md:
+https://github.com/ElFDA/FrontierMr/tree/master/docs
+Le versioni precedenti si chiamavano "frontend": al primo avvio la cartella
+/media/fat/frontend diventa /media/fat/frontier (frontend.ini diventa
+frontier.ini, frontend.off frontier.off), con temi, preferiti, media e
+impostazioni.
+
+PRIMA SCHERMATA
+  Favorites   tutti i giochi preferiti in un'unica lista (a destra il
+              sistema) e, sopra, una cartella per ogni sistema con i suoi
+              preferiti (Arcade, Mega Drive, SNES..., MiSTer per core e MGL)
+  Recent      gli ultimi giochi avviati, dal piu' recente (vedi RECENTI)
+  My Lists    le tue liste di giochi (vedi LE MIE LISTE)
+  Arcade      i giochi di _Arcade (.mra) e le sue sottocartelle; le
+              _alternatives sono nei dettagli del gioco (X)
+              "#Newest", per primo nella cartella: i giochi arcade comparsi
+              sulla SD negli ultimi 30 giorni (nuovi, non aggiornati), dal piu'
+              nuovo al piu' vecchio; vedi GIOCHI ARCADE NUOVI
+  Computer, Console, Handheld (portatili), Other (altro)
+              i sistemi con giochi in /media/fat/games (vedi sotto); compare
+              solo la categoria che ne ha
+  MiSTer      le cartelle e i core del browser originale (Utility, Other...)
+  Frontier Settings
+              le impostazioni di Frontier, ultima voce (vedi IMPOSTAZIONI
+              DI FRONTIER)
+
+  Dopo l'accensione o un riavvio a freddo Frontier parte sempre da questa
+  schermata; dopo un gioco o un core riapre la cartella dell'ultimo gioco.
+
+  In un gioco: OSD (F12) -> Core apre l'elenco dei core come nel MiSTer
+  originale (per avviare un altro core); Alt+F12, oppure L+R+Select+Start
+  tenuti premuti 2 secondi sul pad, tornano a Frontier.
+
+TASTI
+  Su/Giu', Sinistra/Destra (pagina)   muoversi nella lista (tenendo premuto
+                                      Su/Giu' accelera dopo 1,5 e 3 secondi)
+  L / R  (tastiera - e =)             lettera precedente / successiva
+  A / Invio                           apri cartella o avvia
+  B / Esc                             cartella superiore (nella prima schermata:
+                                      menu OSD)
+  X / Tab / Backspace / I             dettagli del gioco (Backspace su una cartella:
+                                      cartella superiore; sul pad A+B = Backspace)
+  X tenuto premuto un secondo / F     aggiunge o toglie il gioco dai Favorites
+                                      (anche nei dettagli); X premuto e lasciato
+                                      subito apre i dettagli
+  X tenuto premuto su una cartella    aggiorna gli elenchi (vedi sotto)
+  F12 / tasto OSD                     menu originale (System)
+  R2 / ` (accento grave)              browser originale dei core
+  F5                                  ricarica tema, giochi e media (per chi crea temi)
+  Tenendo premuto Su/Giu' scorre solo la lista: immagini e dati del gioco
+  si aggiornano quando ci si ferma.
+
+DETTAGLI DEL GIOCO (X)
+  Immagine o video grande, scheda (anno, sviluppo, editore, genere, giocatori,
+  voto), descrizione e le versioni del gioco: per gli arcade la .mra principale
+  e le sue _alternatives (stesso romset). Su/Giu' sceglie la versione,
+  A la avvia, B o X tornano alla lista, X tenuto premuto aggiunge o toglie
+  il gioco dai Favorites.
+  L'elenco delle alternative si costruisce la prima volta in sottofondo (con
+  la SD fredda anche un minuto) e resta in .cache/alternatives.txt.
+
+IMPOSTAZIONI DI FRONTIER (ultima voce della prima schermata)
+  CRT Geometry        cartella con l'immagine sul CRT:
+    Width, Height     larghezza e altezza dell'immagine sul CRT, 50-100%
+    Left/right, Up/down
+                      posizione dell'immagine sul CRT: pixel a destra e righe
+                      in basso (negativi = a sinistra, in alto)
+    Reset             A: torna a 100%, 100%, +0, +0
+  Scraper             dati, immagini e video dei giochi da Frontier (vedi
+                      SCRAPER DA FRONTIER)
+  Screensaver         cartella con le impostazioni dello screensaver (vedi
+                      SCREENSAVER):
+    Start after       dopo quanto tempo senza tasti parte: OFF, 30 s ... 60 min
+    Time per game     quanto resta ogni gioco: 10 s ... 5 min (di default 30 s)
+    Transition        effetto fra un gioco e l'altro: fade (dissolvenza), slide
+                      (scorrimento), wipe (tendina), none (nessuno)
+  Themes              cartella:
+    Theme             A oppure Destra: tema successivo, Sinistra: precedente
+                      (vedi TEMI)
+    Text layout       ON: le descrizioni al posto delle immagini dei giochi,
+                      per chi fa lo scraping solo dei testi (vedi LAYOUT
+                      TESTUALE); OFF (di base): le immagini
+  Visible systems     i sistemi mostrati da Frontier: Arcade e le
+                      categorie; dentro una categoria A (o Sinistra/Destra) su
+                      un sistema = shown/HIDDEN. Un sistema nascosto non c'e'
+                      nelle liste ne' nello screensaver (preferiti e giochi
+                      recenti restano); una categoria con tutti i sistemi
+                      nascosti sparisce. Scritto in frontier.ini:
+                      hidden=NES,_Arcade...
+  Coin-Op mode        A oppure Sinistra/Destra: ON/OFF (vedi MODALITA' COIN-OP)
+  CRT output          A oppure Sinistra/Destra: ON/OFF, Frontier anche sul CRT
+                      dell'uscita VGA (crt=1, vedi USCITE VIDEO); anche da
+                      F12 -> Scripts -> frontier_crt
+  Recent games        quanti giochi mostra Recent: OFF, 10, 20, 30, 50, 100,
+                      200 (di default 50, vedi RECENTI)
+  Sinistra/Destra (oppure L/R) cambiano il valore selezionato e il CRT lo
+  mostra subito. Mentre e' selezionata una voce di CRT Geometry una cornice gialla segna
+  i bordi dell'immagine: rimpicciolirla e spostarla finche' la cornice si
+  vede tutta (i CRT nascondono i bordi dell'immagine). I valori vengono
+  scritti in frontier.ini (crt_width, crt_height, crt_hpos, crt_vpos) un
+  secondo dopo l'ultima modifica. CRT Geometry c'e' solo se Frontier e'
+  su un CRT (CRT output ON, oppure direct_video=1 in MiSTer.ini).
+  Col menu.rbf di Frontier sinistra/destra sposta il sincronismo del CRT a
+  passi di 4 pixel (non si taglia niente); il resto si fa disegnando
+  l'immagine piu' piccola nella sua pagina 640x240, quindi al 100% spostando
+  l'immagine in alto o in basso si perde qualche riga sul bordo.
+  Queste impostazioni valgono solo per le schermate di Frontier: un gioco
+  mostra l'immagine del suo core, che non cambiano. Prima si regola il CRT
+  (con i suoi comandi) sui giochi, poi si adatta Frontier con queste voci.
+
+PREFERITI (Favorites)
+  X tenuto premuto su un gioco (o F sulla tastiera) lo aggiunge ai Favorites;
+  di nuovo lo toglie (anche dalla lista dei Favorites). Una stella sul
+  riquadro dell'immagine segna i giochi che ci sono gia'. Valgono i giochi
+  per titolo delle console (si avvia la versione predefinita, le altre nei
+  dettagli), i file nelle cartelle di games/, gli arcade e i core.
+  Avvisi: "Added to favorites" (aggiunto), "Removed from favorites" (tolto).
+  Sono in /media/fat/frontier/favorites.txt, una riga per gioco:
+  <chiave><TAB><nome>, chiave = @sys/<cartella>/<titolo> oppure il percorso
+  (games/..., _Arcade/....mra). Si puo' modificare a mano, poi F5.
+
+RECENTI (Recent)
+  Ogni gioco avviato da Frontier (dalle liste, dai dettagli, dai Favorites,
+  da Recent o dallo screensaver; non i core) va in cima a Recent, col sistema a destra;
+  un gioco rigiocato risale in cima. A lo avvia, X apre i dettagli, X tenuto
+  premuto lo aggiunge ai Favorites; L/R spostano di una pagina (la lista non
+  e' in ordine di nome). I giochi per titolo partono con la versione
+  predefinita, come nei Favorites.
+  In frontier.ini (oppure in Frontier Settings, vedi sopra):
+    recent=50                       quanti giochi (0 = niente Recent, non
+                                    si scrive nulla)
+  Sono in /media/fat/frontier/recent.txt, una riga per gioco, dal piu'
+  recente, come favorites.txt. Cancellarlo svuota Recent (poi F5).
+
+LE MIE LISTE (My Lists)
+  Liste di giochi fatte da te, es. "Capcom arcade", "Sparatutto", "Giochi
+  in compagnia": ognuna e' come i Favorites (giochi di tutti i sistemi
+  insieme, il sistema a destra).
+  Aggiungere un gioco: aprire i dettagli (X), scendere su "Add to list..."
+  sotto le versioni e premere A: compaiono le tue liste, con "in list" a
+  destra di quelle che hanno gia' il gioco. A su una lista aggiunge il gioco
+  (o lo toglie, se c'e'); A su "+ New list" crea una lista nuova col gioco
+  ("List 1", "List 2"...). B torna alle versioni.
+  Togliere un gioco: aprire i dettagli dentro la lista, poi A su "Remove from
+  this list" (li' prende il posto di "Add to list..."). Dalle altre liste lo
+  toglie anche "Add to list..." (A su una lista segnata "in list").
+  Una lista da un filtro: in My Lists, "+ New list from filter..." mostra
+  una riga per ogni dato dei giochi, con a destra cosa e' scelto:
+    System      Arcade, Mega Drive, SNES...
+    Core        le schede arcade: CPS1, CPS2, Neo Geo MVS, Sega System 16B...
+    Publisher   Capcom, Konami, Sega...
+    Developer   chi ha fatto il gioco (arcade: il produttore)
+    Genre       Shoot'em up, Platform, Fighting, Beat'em up, Run and gun,
+                RPG, Sports... (gli stessi generi per arcade e console)
+    Subgenre    Shoot'em up / Vertical, Sports / Soccer...
+    Decade      1980s, 1990s...     Year   1991...
+    Series      Street Fighter, Castlevania, Thunder Force...
+    Players     1 player ... 5+ players (quanti possono giocare insieme)
+  A su una riga mostra i suoi valori col numero di giochi (contando le
+  altre scelte): A mette [x] o toglie la spunta, "Any" le toglie tutte, B
+  torna indietro. Piu' valori di una riga: uno di questi; piu' righe: tutte.
+  Es. i platform di Capcom e Konami per lo SNES:
+    System = SNES, Publisher = Capcom + Konami, Genre = Platform
+  Poi, in fondo alle righe:
+    Show the N games              i giochi del filtro (si avviano, mostrano
+                                  i dettagli... come nelle altre liste)
+    Create a list with the N games...  una lista nuova, poi il suo nome:
+                                  Name it "..." = il nome fatto dal filtro
+                                  ("SNES - Capcom, Konami - Platform");
+                                  Type a name on the keyboard... = un nome
+                                  tuo, scritto con una tastiera USB (Invio:
+                                  crea, Esc o B: annulla)
+    Add the N games to a list...  li aggiunge a una tua lista (quelli gia'
+                                  presenti restano una volta sola): cosi'
+                                  filtri diversi vanno nella stessa lista
+    Clear the filter              niente di scelto
+  Il filtro resta com'e' (anche dopo un gioco) finche' non si crea una
+  lista o non si aggiungono i suoi giochi a una lista: allora riparte da
+  zero. Una lista fatta cosi' e' come le altre: si aggiungono o tolgono giochi come
+  sopra.
+  I dati vengono dallo scraper: alla fine di ogni passata scrive
+  .cache/meta.tsv; per rifarlo senza scaricare nulla:
+    python3 /media/fat/frontier/scraper/fe_scrape.py --index
+  (la prima volta legge tutte le risposte salvate dallo scraper: qualche
+  minuto; poi meno di un minuto). Hanno dati solo i giochi passati dallo
+  scraper; gli arcade hanno sempre almeno core, produttore e anno (dal
+  .mra). I generi delle fonti sono resi uguali da scraper/genres.ini, i nomi
+  della stessa ditta ("Capcom U.S.A.", "Mitchell (Capcom license)") da
+  scraper/publishers.ini, i nomi dei core arcade da scraper/arcade_cores.ini:
+  si possono modificare, poi si rilancia --index.
+  In fondo a ogni lista:
+    Rename this list (keyboard)   scrivere il nome nuovo con una tastiera
+                                  USB: c'e' gia' il nome da cambiare,
+                                  Backspace cancella, Invio salva; Esc o B
+                                  sul pad annullano (es. se non c'e' una
+                                  tastiera collegata)
+    Delete this list              A la cancella; una lista con giochi chiede
+                                  A una seconda volta
+  I nomi si possono cambiare anche in /media/fat/frontier/mylists.ini, poi
+  F5. mylists.ini ha una sezione per lista, col nome tra parentesi
+  quadre, poi una riga per gioco come in favorites.txt:
+    [Sparatutto]
+    @sys/MegaDrive/Thunder Force IV<TAB>Thunder Force IV
+    _Arcade/1943 The Battle of Midway (Euro).mra<TAB>1943 The Battle of Midway (Euro)
+
+SCREENSAVER
+  Dopo un po' senza tasti (5 minuti di default) Frontier mostra giochi a
+  caso, uno dopo l'altro: il video (o l'immagine, se il video non c'e'), la
+  scheda e la descrizione, con l'aspetto del tema. Compaiono solo giochi con
+  un video o un'immagine: gli arcade di _Arcade e i giochi per titolo dei
+  sistemi. Start sul pad (Spazio sulla tastiera) avvia il gioco mostrato;
+  qualsiasi altro tasto torna alla schermata di prima.
+  In frontier.ini (oppure in Frontier Settings -> Screensaver, vedi sopra):
+    screensaver=300                 secondi senza tasti (0 = spento)
+    screensaver_time=30             secondi per ogni gioco
+    screensaver_transition=fade     fade, slide, wipe oppure none
+    screensaver_transition_ms=700   durata della transizione
+  I temi lo disegnano con screensaver.ini / screensaver_43.ini (se mancano
+  si usano quelli del tema simple). Con l'aspetto semplice (theme=none) non
+  c'e' lo screensaver.
+
+SCHERMATA DI CARICAMENTO
+  Mentre un core carica il gioco (la barra in alto a sinistra dell'OSD, lenta
+  con i giochi Neo Geo grandi) l'HDMI mostra la schermata di caricamento del
+  tema: il gioco, la sua copertina, un'animazione e l'avanzamento, poi il
+  gioco. L'uscita analogica di un core mostra solo l'immagine del core e
+  l'OSD: sul CRT c'e' una schermata di caricamento nell'OSD (bianca
+  sull'immagine scurita del core: un disco che gira, NOW LOADING, il gioco,
+  la barra); loading_crt=0 in frontier.ini rimette la barra dell'OSD. Con
+  direct_video=1 per i giochi (MiSTer.ini, [MiSTer] o la sezione del core,
+  non [Menu]: configurazioni solo CRT, HDMI a 15 kHz) anche il CRT mostra la
+  schermata del tema. I temi la disegnano con loading.ini / loading_43.ini
+  (se mancano si usa quella del tema simple); loading_screen=0 in
+  frontier.ini la spegne.
+
+GIOCHI SU UN DISCO USB
+  Se /media/fat/games e' un link a un disco USB, il disco si monta qualche
+  secondo dopo l'avvio del MiSTer. Impostare games_wait=N in frontier.ini:
+  l'attesa massima in secondi, per esempio 30. Non e' un ritardo: games/ si
+  controlla subito e, finche' e' vuota, ogni 2 secondi; appena il disco c'e'
+  compaiono i sistemi e il Coin-Op avvia il gioco. Dopo N secondi smette di
+  riprovare (Coin-Op: "game not found, skipped"). games_wait=0 (default):
+  giochi sulla SD, nessuna attesa.
+
+MODALITA' COIN-OP (riparte l'ultimo gioco all'accensione)
+  Come un cabinato: accendendo il MiSTer riparte da solo l'ultimo gioco
+  lanciato da Frontier (arcade, console, computer, portatili, anche dai
+  Favorites; la ROM caricata dall'OSD dentro un core non conta).
+  Si accende e si spegne da Frontier Settings -> "Coin-Op mode"
+  (A: ON/OFF), che scrive
+  coinop=1/0 in frontier.ini (si puo' cambiare anche dal PC).
+  All'accensione il gioco parte subito. Con coinop_delay=N in frontier.ini
+  prima compare in basso "Coin-Op: <gioco> - any button: menu" per N secondi,
+  e un tasto qualsiasi annulla l'avvio ("Coin-Op: cancelled"). Se games/ e'
+  su un disco USB montato in ritardo aspetta il gioco fino a games_wait
+  secondi (vedi GIOCHI SU UN DISCO USB).
+  Tornando al menu da un gioco non riparte niente: solo all'accensione.
+  Anti-panico, se l'ultimo gioco non si vede sul CRT o blocca il MiSTer:
+  - spegni e riaccendi entro un minuto: l'avvio automatico vale solo se il
+    gioco e' rimasto acceso coinop_safe secondi (60); altrimenti alla
+    riaccensione non parte niente ("Coin-Op: last start did not complete,
+    skipped") e si e' in Frontier;
+  - nel gioco, L+R+Select+Start tenuti premuti 2 secondi tornano al menu
+    (premuti di corsa restano al gioco: in molti giochi SNES sono il reset).
+    Sono i tasti del pad come mappati per il menu. panic_combo=0 in
+    frontier.ini li disattiva;
+  - con coinop_delay, un tasto durante il conto alla rovescia;
+  - dal PC: coinop=0 in frontier.ini, oppure un file vuoto
+    frontier/coinop.off sulla SD.
+  L'ultimo gioco e' in frontier/coinop_last.txt (percorso, nome, file da
+  aspettare); frontier/coinop.pending esiste nel primo minuto di un avvio
+  automatico.
+
+AGGIORNARE GLI ELENCHI (dopo aver aggiunto o tolto giochi o core)
+  Gli elenchi dei giochi di ogni sistema, dei sistemi con giochi e core e delle
+  versioni arcade si creano la prima volta e restano in /media/fat/frontier/.cache:
+  ai ritorni dai giochi Frontier non rilegge il disco. Per rileggerli, X
+  tenuto premuto (F sulla tastiera):
+    su un sistema (Console -> Mega Drive) o su "Folders" dentro il sistema
+                                      i giochi di quel sistema
+    su Computer, Console, Handheld, Other nella prima schermata
+                                      tutti i sistemi della categoria, anche quelli
+                                      nuovi (cartelle o core aggiunti)
+    su Arcade nella prima schermata   le versioni alternative (_alternatives)
+  In basso compare "Updating: ..." e poi "List updated: ..." (elenco
+  aggiornato), la lista resta usabile intanto. F5 rilegge tutto quello che si
+  apre fino al prossimo avvio. Con rescan=auto in frontier.ini si torna al
+  controllo automatico a ogni avvio. Cancellare la cartella .cache = tutto
+  rifatto al primo uso.
+
+GIOCHI PER SISTEMA
+  Computer, Console, Handheld e Other elencano le cartelle di
+  /media/fat/games che hanno file e un core installato.
+  Dentro un sistema c'e' un solo elenco con tutti i giochi delle sue
+  sottocartelle (1 US, 2 Europe, 2 Japan...), una voce per titolo: entrano i
+  file con la regione nel nome alla No-Intro, es. "Altered Beast (USA, Europe).md";
+  hack, traduzioni, copie pirata e file con altro testo dopo i tag restano
+  solo in "Folders". La data davanti al nome (raccolte per data) non conta.
+  Le raccolte senza nomi No-Intro (es. uno zip di giochi C64 chiamati "Spy vs
+  Spy.crt") stanno solo in "Folders", dove uno zip si apre come una
+  cartella. File e cartelle col nome che inizia con @ ("@C64 2023-4-28.zip")
+  vanno come gli altri.
+  Le cartelle "Extra" (games/NES/Extra con unlicensed, prototipi, hack,
+  raccolte...) sono saltate, nella lista e nello scraper: si vedono solo da
+  "Folders". Per cambiare nome o aggiungerne altre: exclude_dirs= in
+  frontier.ini (es. exclude_dirs=Extra,Unsupported).
+  A avvia la versione uscita davvero (prima di beta e prototipi, anche
+  se di un'altra regione) della regione preferita (regions= in frontier.ini,
+  di base USA, World, Europe, Japan; poi revisione piu' recente). X mostra
+  tutte le versioni: regioni, revisioni e anche gli altri titoli dello stesso
+  gioco (Thunder Force IV e Lightening Force compaiono tutti e due nella
+  lista, ognuno con le versioni dell'altro nei dettagli). Per questi ultimi
+  serve una volta per sistema:
+    python3 /media/fat/frontier/scraper/fe_scrape.py --groups --system MegaDrive
+  (liste software di MAME, abbinamento per nome o CRC; la prima volta pochi
+  minuti, poi secondi) -> gamelists/<sistema>/groups.txt. Poi F5.
+  Gli zip entrano nell'elenco come i file normali: le rom che contengono con
+  la regione nel nome, un gioco per zip ("Altered Beast (USA, Europe).zip")
+  oppure tutta una raccolta in un solo zip ("SNES.zip", anche con cartelle
+  dentro).
+  "Folders" in cima all'elenco porta alle cartelle vere (hack, traduzioni,
+  raccolte...). L'elenco si legge una volta e resta in .cache/games_*.txt:
+  dalla volta dopo compare subito e non si rilegge piu' (vedi AGGIORNARE GLI
+  ELENCHI).
+  Il gioco parte con un MGL (come i .mgl ufficiali) creato in launch/.
+  Neo Geo (romsets=1 in systems.ini): i nomi non hanno la regione, si usano i
+  romset come fa il core: i .neo con il setname alla fine del nome
+  ("3 Count Bout (3countb).neo") e gli zip elencati in games/NEOGEO/romsets.xml
+  (3countb.zip -> "3 Count Bout"). Stesso titolo = una voce, con .neo, zip,
+  "set 2" e versione AES nei dettagli (parte il .neo); titoli diversi dello
+  stesso romset sono collegati. In "Folders" zip e .neo si vedono con i nomi
+  di romsets.xml, come nel browser del core.
+  Anche i .neo senza setname ("Burning Fight.neo") sono giochi, col nome del
+  file come titolo; e cosi' i .neo dentro uno zip che non e' un romset di
+  romsets.xml (es. NEOGEO.zip con BeatEmUp/Burning Fight.neo...): partono da
+  dentro lo zip. Lo scraper gli da' il setname del gioco con lo stesso nome
+  in romsets.xml ("The Super Spy" = "Super Spy, The" -> superspy), cosi'
+  ArcadeDB e ScreenScraper li trovano. Se una versione non ha dati suoi,
+  Frontier mostra quelli di un'altra versione dello stesso gioco.
+
+DATI DEI SISTEMI
+  Su un sistema (in Computer, Console, Handheld, Other, nei Favorites e in My
+  Lists) Frontier mostra cos'e': descrizione, produttore, anno, tipo e
+  l'hardware (CPU, memoria, grafica, suono, supporti, unita' vendute...).
+  Col layout testuale la descrizione prende il posto dell'immagine; i temi
+  mostrano produttore e anno dove mostrano quelli dei giochi.
+  I dati vengono da Wikipedia, insieme ai testi dei giochi (Texts ON nello
+  scraper): l'articolo inglese scritto in wiki= di systems.ini, la
+  descrizione nella lingua dello scraper (da quello inglese se in quella
+  lingua l'articolo non c'e'), l'hardware dalla tabella dell'articolo
+  inglese. Salvati in frontier/gamelists/systems/gamelist.xml, una volta per
+  sistema; di nuovo con "Games already scraped" = texts again (o
+  --refresh-data).
+  Solo i dati dei sistemi: Frontier Settings -> Scraper -> "Get systems data
+  only", oppure da SSH:
+    python3 /media/fat/frontier/scraper/fe_scrape.py --systems-info --all-systems --lang it
+  Temi: ${game.desc} (descrizione e hardware), ${game.developer},
+  ${game.year}, ${game.genre} e una variabile per ogni dato: ${game.cpu},
+  ${game.memory}, ${game.graphics}, ${game.sound}, ${game.display},
+  ${game.media}, ${game.units}, ${game.generation}, ${game.released}...
+
+SCRAPER DA FRONTIER (Frontier Settings -> Scraper)
+  Start scraping      A: avvia lo scraper in sottofondo con le scelte qui
+                      sotto (di nuovo A: Stop scraping). A destra l'avanzamento,
+                      per es. "SNES 120/840 (2/5)", poi finished/stopped/error.
+                      Si puo' continuare a usare Frontier e giocare: lo scraper
+                      va avanti; le immagini nuove di un sistema compaiono
+                      quando quel sistema e' finito. Uscita dello scraper:
+                      frontier/.cache/scrape.log
+  Get systems data only
+                      A: solo i dati dei sistemi scelti (descrizione,
+                      produttore, anno, hardware da Wikipedia, vedi DATI DEI
+                      SISTEMI), nella lingua scelta: pochi minuti, niente
+                      giochi. Quelli gia' presenti si saltano, tranne con
+                      "Games already scraped" = texts again o all again.
+  Systems             Arcade e le categorie; dentro una categoria "All" oppure
+                      un sistema alla volta: ON/OFF
+  Language            English (di base), Italian, French, German, Spanish,
+                      Portuguese, Japanese: descrizioni e generi
+  Texts               nomi, descrizioni, generi, editori... ON/OFF; anche i
+                      dati dei sistemi (vedi DATI DEI SISTEMI)
+  Box art, Screenshots, Title screens, Marquees and logos, Fanart, Videos
+                      cosa scaricare, ON/OFF ciascuno (di base tutto tranne
+                      il fanart)
+  Games already scraped
+                      skip (solo cio' che manca, di base), texts again (i dati
+                      nella lingua scelta, immagini tenute), all again (tutto)
+  ScreenScraper user, ScreenScraper password
+                      A, poi si scrivono con una tastiera collegata al MiSTer
+                      (Invio: salva, Esc: annulla; vuoto = tolto). Salvati in
+                      scraper.ini. Senza account si usano solo ArcadeDB e
+                      libretro (arcade, immagini).
+  Le scelte restano in frontier.ini (scrape_systems, scrape_lang,
+  scrape_text, scrape_media, scrape_redo). Fermarlo e' sicuro: quello che
+  e' scaricato resta e la volta dopo riprende da li'.
+
+SCRAPER (dati e immagini)
+  Sul MiSTer (via SSH o terminale):
+    python3 /media/fat/frontier/scraper/fe_scrape.py --arcade
+    python3 /media/fat/frontier/scraper/fe_scrape.py --system NES --system SNES
+    python3 /media/fat/frontier/scraper/fe_scrape.py --all-systems
+  Opzioni utili: --limit 20 (prova), --force (rifai), --lang it (descrizioni
+  e generi in italiano; di base inglese), --help.
+  --media box,snap,video: solo queste immagini/video (box, snap, title,
+  marquee, fanart, video; none = niente media); --no-text: niente dati, solo
+  media.
+  --groups (con --system o --all-systems): solo i titoli diversi dello stesso
+  gioco dalle liste MAME, niente dati o immagini.
+  --category Console (o Handheld/Portatili, Computer, Other/Altro; ripetibile):
+  tutti i sistemi di una categoria di systems.ini.
+  --systems-info: solo i dati dei sistemi (Wikipedia, vedi DATI DEI SISTEMI)
+  di --system, --category o --all-systems; si fa anche coi giochi, tranne
+  con --no-text.
+  --index: solo i dati per "+ New list from filter..." (vedi LE MIE LISTE),
+  senza rete; si fa anche alla fine di ogni passata.
+  --refresh-data: riscrive nomi, descrizioni, generi... nella lingua di
+  --lang (es. dopo uno scrape in un'altra lingua), senza riscaricare le
+  immagini che ci sono gia' (--force riscarica tutto). Le risposte di
+  ArcadeDB sono tenute per lingua (.scrape_cache/adb_en...).
+  Per i sistemi lo scraper lavora come la lista: solo i file con regione, una
+  richiesta per titolo (la versione che parte), dati e immagini copiati anche
+  sulle altre versioni del titolo. --all-files = tutti i file, hack compresi.
+  Neo Geo: come la lista (romset), dati e immagini da ArcadeDB e ScreenScraper
+  per setname, come gli arcade.
+  Copertine di un'altra regione: --box-regions jp, oppure in scraper.ini
+    [scraper]
+    box_regions = jp
+  Esempio, tutte le console con i video (ScreenScraper; serve tempo, si puo'
+  interrompere e riprendere):
+    python3 /media/fat/frontier/scraper/fe_scrape.py --groups --category Console
+    nohup python3 /media/fat/frontier/scraper/fe_scrape.py --category Console --video > /media/fat/frontier/scrape.log 2>&1 &
+  Fanart e video si scaricano solo su richiesta: --fanart, --video (vedi sotto).
+  I fanart gia' scaricati restano e il gamelist continua a usarli; per
+  liberare spazio si puo' cancellare a mano media/<sistema>/fanart/.
+  Fonti, in quest'ordine: ScreenScraper (tutti i sistemi, anche gli arcade,
+  cosi' tutti hanno gli stessi generi, descrizioni e video: serve un account
+  gratuito di screenscraper.fr, vedi scraper/scraper.ini.example -> copiarlo
+  in /media/fat/frontier/scraper.ini o accanto all'esempio e scrivere user e
+  password; le credenziali "developer" di Frontier sono nello scraper), ArcadeDB (arcade e
+  Neo Geo: quello che ScreenScraper non ha, o tutto senza il suo account),
+  libretro-thumbnails (immagini). Altro ordine: --sources adb,ss,libretro.
+  Sul PC con la SD montata: aggiungere --root <percorso della SD>; con
+  Pillow le immagini vengono anche rimpicciolite.
+  Interrompere lo scraper (Ctrl+C) e' sicuro: rilanciandolo riprende da dove era.
+  I messaggi dello scraper sono in inglese.
+
+VIDEO
+  Frontier riproduce i video mp4 che lo scraper scarica con --video
+  (ScreenScraper, ArcadeDB), con il loro audio, dove il tema ha un elemento
+  video (nei temi City Pop: la schermata di dettaglio). Li decodifica l'ARM
+  del MiSTer con lib/fe_av.so (FFmpeg, licenza in lib/FFMPEG_LICENSE.txt) sul
+  core del processore che il menu lascia libero: un video 640x480 di
+  ScreenScraper occupa circa meta' di quel core, il menu resta veloce come
+  prima. Senza lib/fe_av.so si vedono solo i video .mjv (che non hanno audio).
+  Audio: video_volume=40 in frontier.ini (0-100, 0 = muto; il valore di
+  partenza e' piu' basso dei giochi). Si ferma quando si chiude il dettaglio,
+  parte un gioco o si apre l'OSD. Con TV e CRT insieme (modalita' doppia) il
+  video si vede su tutti e due.
+  I video .mjv (sequenza di immagini JPEG, piu' leggeri da riprodurre, ~7 MB
+  per 30 s) funzionano ancora e hanno la precedenza sull'mp4 dello stesso
+  gioco. Si fanno sul PC con ffmpeg: python3 fe_scrape.py --root <SD> --video
+  --mjv scarica e converte, --convert-videos converte gli mp4 gia' scaricati;
+  dal repository tools/fe/convert_videos.sh [sistema ...] prende gli mp4 dal
+  MiSTer e rimanda i .mjv (poi rilanciare lo scraper con le stesse opzioni per
+  scriverli nei gamelist).
+
+AGGIORNAMENTI (update_all / downloader)
+  Installa una volta con F12 -> Scripts -> frontier_install, poi usa
+  update_all come al solito: niente comandi da terminale, modifiche agli ini
+  o reinstallazioni dopo gli aggiornamenti. I core ufficiali, il menu.rbf
+  ufficiale e tutto il resto continuano ad aggiornarsi.
+  Due modi per installare:
+  - con update_all: copia downloader_frontiermr.ini (da
+    https://github.com/ElFDA/FrontierMr/releases/latest/download/downloader_frontiermr.ini)
+    in /media/fat, lancia update_all, poi frontier_install;
+  - lo ZIP di una release (https://github.com/ElFDA/FrontierMr/releases):
+    copia il contenuto della sua cartella SD sulla scheda, poi
+    frontier_install.
+  Come MiSTer resta quello di Frontier:
+  - il firmware di Frontier sta in frontier/bin (MiSTer e menu.rbf). Il
+    MiSTer nella radice e' una copia; il menu.rbf nella radice resta quello
+    ufficiale e Frontier carica il suo da frontier/bin (all'accensione puoi
+    vedere per un attimo il menu ufficiale: Frontier passa al suo).
+  - frontier/guard.sh, avviato da linux/user-startup.sh allo spegnimento e
+    all'avvio, copia frontier/bin/MiSTer nella radice ogni volta che
+    qualcos'altro (un aggiornamento, un altro programma) l'ha sostituito.
+    Frontier fa lo stesso prima di avviare un core e prima di un riavvio
+    dall'OSD.
+  - '!misterfirmware' nel filtro di [distribution_mister] in downloader.ini
+    evita di scaricare per niente il MiSTer ufficiale. Se un aggiornamento
+    riscrive downloader.ini o user-startup.sh, Frontier rimette le sue righe
+    all'avvio successivo (log: frontier/update_protection.log).
+  - Aggiornamenti di Frontier: /media/fat/downloader_frontiermr.ini (lo
+    mette frontier_install) fa scaricare a update_all ogni release nuova e ne
+    prende i file di frontier/ e gli script frontier_* (frontier.ini,
+    preferiti, liste, gamelist e media non vengono mai sostituiti). Dopo
+    l'aggiornamento il MiSTer si riavvia e il guardiano installa il MiSTer
+    nuovo.
+  Se hai installato un vecchio pacchetto di Frontier, copia la cartella SD
+  del nuovo pacchetto sulla scheda e rilancia frontier_install una volta:
+  nella radice torna il menu.rbf ufficiale (al piu' tardi col prossimo
+  update_all; quello di Frontier sta in frontier/bin) e frontier_crt_menu non serve piu'. Impostazioni e dati
+  vengono conservati.
+  frontier_on_off cambia solo l'interfaccia; MiSTer resta quello di Frontier.
+  TORNARE AL FIRMWARE UFFICIALE: F12 -> Scripts -> frontier_uninstall. Ferma
+  il guardiano, toglie le righe e il database di Frontier dalla
+  configurazione degli aggiornamenti e rimette MiSTer.orig (salvato da
+  frontier_install); senza MiSTer.orig il MiSTer ufficiale arriva col
+  prossimo update_all. File, impostazioni e media di Frontier restano sulla
+  SD: frontier_install lo riporta.
+  Non eseguire altri aggiornamenti durante l'installazione. Se non riesce a
+  configurare la protezione, lo script si ferma prima di sostituire MiSTer;
+  invia l'errore a chi ti ha fornito il pacchetto. Dettagli in
+  frontier/update_protection.log, cosa ha fatto il guardiano in
+  frontier/guard.log.
+
+VELOCITA' SULLA TV
+  Frontier disegna alla risoluzione del framebuffer del menu: a 1080p ogni
+  passo della lista costa ~70 ms. Con fb_size=2 nella sezione [Menu] del
+  MiSTer.ini (o dell'ini della TV) il menu lavora a 960x540 ingrandito dallo
+  scaler: ~20 ms per passo, immagine un po' piu' morbida.
+
+USCITE VIDEO (MiSTer.ini)
+  Le impostazioni principali di /media/fat/MiSTer.ini per ogni caso; le
+  altre opzioni possono restare ai valori di serie. Fare una copia dell'ini
+  prima di cambiarlo. Due configurazioni possono stare in due ini (per es.
+  MiSTer.ini e MiSTer_TV.ini), scelti dall'OSD.
+
+  Solo CRT (VGA della I/O board analogica -> TV/PVM, SCART RGB)
+    [MiSTer]
+    vga_scaler=0           ; VGA = video originale del core (15 kHz)
+    forced_scandoubler=0   ; 1 solo per un monitor VGA a 31 kHz
+    composite_sync=1       ; sync composito per TV/PVM via SCART
+                           ; (vga_sog=1 se il cavo usa il sync sul verde)
+    vga_mode=rgb           ; ypbpr per il component
+    direct_video=0
+    [Menu]
+    direct_video=1         ; Frontier a 640x240 anche sulla VGA
+    menu_pal=0             ; 1 se il CRT non regge l'NTSC
+  Senza direct_video=1 in [Menu] (e col menu.rbf ufficiale) nel menu la VGA
+  mostra solo statica: Frontier disegna nel framebuffer. Senza cambiare
+  MiSTer.ini, F12 -> Scripts -> frontier_crt (crt=1) manda Frontier anche al
+  CRT: l'OSD li' si vede anche quando il menu e' statica.
+  Con un DAC HDMI->VGA al posto della I/O board: direct_video=1 in
+  [MiSTer] (2 per i DAC che dichiarano 1024x768) e composite_sync=1.
+
+  Solo HDMI
+    [MiSTer]
+    video_mode=8           ; 1920x1080@60 (0 = 720p, 14 = 1440p)
+    vsync_adjust=2         ; latenza bassa (1 se la TV perde il segnale)
+    vscale_mode=0          ; 1 = solo scala intera
+    direct_video=0         ; con 1 la TV riceve 240p grezzo
+    hdmi_limited=0
+    [Menu]
+    fb_size=2              ; Frontier piu' veloce (vedi VELOCITA' SULLA TV)
+  e crt=0 in frontier.ini.
+
+  CRT + HDMI insieme
+    [MiSTer]
+    video_mode=8
+    vsync_adjust=2
+    direct_video=0         ; HDMI scalato sulla TV
+    vga_scaler=0           ; 15 kHz nativi sul CRT
+    composite_sync=1
+    forced_scandoubler=0
+    [Menu]
+    video_mode=8
+    direct_video=0
+    fb_size=2
+  e CRT output ON (Frontier Settings -> CRT output, oppure F12 -> Scripts ->
+  frontier_crt: crt=1 in frontier.ini). I giochi escono sempre su tutte e due.
+  Frontier carica il suo menu.rbf (frontier/bin): il menu e' in HD sulla TV
+  e a 240p sul CRT (theme_43.ini). Col menu.rbf ufficiale (se quello di
+  Frontier non e' riuscito a partire) le due uscite mostrano la stessa
+  immagine 4:3.
+
+  Da evitare: direct_video=1 in [MiSTer] con una TV HDMI (serve solo ai
+  DAC); vga_scaler=1 con un CRT a 15 kHz (la VGA riceve l'uscita dello
+  scaler, 31 kHz o piu').
+  vscale_mode=4 (o un valore diverso da 0 e 1) in [MiSTer]: la schermata di
+  caricamento dei giochi perde il sync, su HDMI e su CRT. Usare 0 o 1.
+
+DISATTIVARE FRONTIER
+  F12 -> Scripts -> frontier_on_off (oppure creare il file
+  /media/fat/frontier.off) -> torna il browser originale; lo stesso script
+  riaccende Frontier.
+
+SCRIPT (F12 -> Scripts)
+  frontier_install    installa Frontier, o una versione nuova da un pacchetto;
+                      tiene impostazioni, liste e media (vedi AGGIORNAMENTI)
+  frontier_uninstall  torna al firmware ufficiale (vedi AGGIORNAMENTI)
+  frontier_on_off     spegne la schermata di Frontier (browser originale) o la
+                      riaccende
+  frontier_crt        Frontier anche sul CRT dell'uscita VGA, acceso o spento
+                      (come Frontier Settings -> CRT output)
+  Lo scraper si lancia da Frontier Settings -> Scraper (vedi SCRAPER DA
+  FRONTIER); lo script frontier_scrape delle versioni precedenti viene tolto.
+
+QUESTA CARTELLA (/media/fat/frontier)
+  favorites.txt     i preferiti (vedi sopra)
+  recent.txt        i giochi recenti (vedi sopra)
+  mylists.ini       le tue liste (vedi sopra)
+  frontier.ini      theme=<nome tema> (vedi TEMI; none = aspetto semplice)
+                    fps=30 (animazioni)   debug=1 (tempi di disegno su stderr)
+                    regions=, exclude_dirs=, rescan=, crt=, crt_width=, crt_height=,
+                    crt_hpos=, crt_vpos=, recent=, screensaver=... (vedi i commenti, in inglese)
+  systems.ini       sistemi: cartella in games/ -> core e parametri MGL
+  themes/<nome>/    temi: theme.ini (16:9), theme_43.ini (4:3/CRT), detail.ini e
+                    detail_43.ini (dettagli), screensaver.ini e screensaver_43.ini
+                    (screensaver), loading.ini e loading_43.ini (schermata di
+                    caricamento; se mancano si usano quelli di default),
+                    immagini, font
+  themes/<nome>/media/systems/<chiave>.png|.jpg
+                    immagine del tema nel riquadro grande per la prima
+                    schermata (chiave favorites, recent, mylists, arcade, computer,
+                    console, handheld, other, mister, settings; senza settings
+                    l'immagine di mister) e per i sistemi, anche nei
+                    Favorites (chiave = cartella di games/ in minuscolo, es.
+                    3do, nes, gameboy, oppure il nome della sezione in
+                    systems.ini, es. gameboycolor).
+                    JPG per immagini piene, PNG solo se serve la trasparenza;
+                    dimensione consigliata 660x495 (4:3). Dopo averle copiate: F5.
+  gamelists/<sistema>/gamelist.xml   dati dei giochi (formato EmulationStation)
+  media/<sistema>/<tipo>/<gioco>.png|.jpg|.mp4|.mjv
+                    tipo: box snap title marquee fanart video
+                    sistema: arcade, nes, snes, ... (cartella di games/ in minuscolo)
+  launch/           MGL creati per avviare i giochi (si possono cancellare)
+  bin/              MiSTer e menu.rbf di Frontier (vedi AGGIORNAMENTI)
+  guard.sh, protect_updates.py, guard.log, update_protection.log
+                    tengono MiSTer dopo gli aggiornamenti (vedi AGGIORNAMENTI)
+  downloader_frontiermr.ini
+                    database di Frontier per update_all, copiato in /media/fat
+  old/              cartelle di versioni precedenti (il tema "default", ora
+                    "simple")
+  scraper/          fe_scrape.py: scarica dati e immagini; genres.ini,
+                    publishers.ini, arcade_cores.ini (vedi LE MIE LISTE)
+  .cache/           elenchi salvati (vedi AGGIORNARE GLI ELENCHI), meta.tsv
+                    (dati dei giochi per le liste da un filtro)
+
+GIOCHI ARCADE NUOVI
+  Arcade -> "#Newest" elenca i .mra nuovi (anche nelle sottocartelle di
+  _Arcade, non _alternatives) col giorno in cui Frontier li ha visti. La data
+  dei file non distingue nuovo da aggiornato (update_all li riscrive), quindi
+  Frontier tiene un suo elenco in frontier/arcade_seen.txt: la prima volta
+  tutto quello che c'e' gia' sulla scheda e' considerato noto e "#Newest" e'
+  vuota; da allora un gioco che non c'era all'avvio precedente di Frontier (o
+  alla visita precedente di "#Newest", o a F5) e' nuovo. Resta per newest=30
+  giorni in frontier.ini (0 = niente "#Newest"). Cancellando arcade_seen.txt
+  si riparte da adesso. Serve l'orologio del MiSTer a posto (internet almeno
+  una volta).
+
+TEMI
+  Il tema si cambia da Frontier Settings -> Themes -> "Theme" (A), oppure con
+  theme= in frontier.ini.
+  citypop_blue  il pop giapponese degli anni della bolla sul blu dei titoli,
+              riquadri chiari, una bolla rosa, ombre sfalsate, cartoline per
+              la prima schermata. E' il tema usato se frontier.ini non ha
+              theme=
+  citypop     lo stesso su rosa pallido con griglia tratteggiata, menta e blu
+  citypop_dark  lo stesso sullo sfondo scuro del sito di notte
+  simple      blu scuro, l'aspetto originale di Frontier. E' anche il tema da
+              cui si prendono le schermate che mancano in un altro tema
+
+LAYOUT TESTUALE
+  Frontier Settings -> Themes -> "Text layout" ON (text_layout=1 in
+  frontier.ini): nella lista e nel dettaglio la descrizione del gioco scorre
+  dove c'era la sua immagine (o il video); nome, anno, produttore, genere e
+  il resto restano. Per chi fa lo scraping solo dei testi, senza immagini.
+  Nella prima schermata e sulle categorie restano le immagini del tema; su
+  un sistema la sua descrizione (vedi DATI DEI SISTEMI).
+  Tutti i temi di Frontier lo hanno. In un tema: layout=media sugli elementi
+  delle immagini (si vedono solo col layout testuale OFF), layout=text su
+  quelli che li sostituiscono (solo con ON); gli elementi senza layout ci
+  sono sempre.
+
+CREARE UN TEMA
+  Aprire tools/fe/theme_editor.html (nel repository) con Chrome o Edge,
+  "Open folder" su una copia di themes/simple, modificare, "Save to folder",
+  copiare la cartella in /media/fat/frontier/themes/, mettere
+  theme=<nome> in frontier.ini e premere F5.
+  L'editor modifica theme.ini, theme_43.ini, detail.ini, detail_43.ini,
+  screensaver.ini e screensaver_43.ini ("Variant"; "Make 4:3", "Make detail"
+  e "Make screensaver" creano quelli che mancano) e
+  carica i file .ini di altri temi con "Import .ini". "text layout" nella
+  barra mostra il tema come con Text layout ON (chiave layout=, vedi LAYOUT
+  TESTUALE).
+  GUIDA_TEMA_ita.txt (in questa cartella) rifa' il tema City Pop passo per
+  passo.
+  Le chiavi dei temi sono descritte (in inglese) in testa a
+  themes/simple/theme.ini.
+
+  Testo sul CRT (theme_43.ini, 240 righe): il testo e' disegnato sulle righe
+  vere dello schermo, con i tratti orizzontali su righe intere
+  (font_hinting=light, il default). Il CRT ha 640 colonne ma solo 240 righe,
+  quindi caratteri piu' stretti restano leggibili e fanno stare nomi piu' lunghi:
+    [theme]
+    font_width=85        larghezza dei caratteri in percento (anche negli elementi di testo)
+    font_hinting=light   light | mono (netto, seghettato) | full | none
+  Dimensioni che si leggono bene a 240p con base=960x720: liste 28
+  (row_height=42), testi piccoli 26, titoli 34 e piu'. Sotto 26 le lettere
+  perdono dettagli. Il risultato si vede sul PC con
+  tools/fe/preview/preview.sh <tema> out.png 640 240, poi sul CRT con F5.

@@ -1,0 +1,1354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theme editor MiSTer</title>
+<style>
+:root {
+  --bg: #11151c; --panel: #1a2029; --panel2: #222a35; --line: #2e3846; --text: #e6e9ee; --dim: #8d99ab;
+  --accent: #ffb000; --accent2: #4c8dff; --danger: #e5484d;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; display: grid; grid-template-rows: auto 1fr auto; }
+button, select, input, textarea { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; }
+button { padding: 4px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent2); }
+button.primary { background: #2b4f8f; border-color: #3d6bc0; }
+button:disabled { opacity: .45; cursor: default; }
+input, select, textarea { padding: 3px 6px; }
+input[type=number] { width: 64px; }
+input[type=color] { width: 28px; height: 24px; padding: 0 2px; vertical-align: middle; }
+textarea { width: 100%; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header .title { font-weight: 600; color: var(--accent); margin-right: 8px; }
+header .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+main { display: grid; grid-template-columns: 230px 1fr 320px; min-height: 0; }
+aside { background: var(--panel); overflow: auto; padding: 8px; min-height: 0; }
+aside#left { border-right: 1px solid var(--line); }
+aside#right { border-left: 1px solid var(--line); }
+h3 { margin: 10px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); }
+#elements { list-style: none; margin: 0; padding: 0; }
+#elements li { padding: 4px 6px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; overflow: hidden; }
+#elements li:hover { background: var(--panel2); }
+#elements li.sel { background: #2b4f8f; }
+#elements li .t { color: var(--dim); font-size: 11px; }
+#elements li.hidden-el { opacity: .5; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.toolbar button { padding: 2px 7px; }
+#stage { overflow: auto; display: flex; align-items: center; justify-content: center; background: repeating-conic-gradient(#151a22 0% 25%, #12161d 0% 50%) 50% / 20px 20px; min-height: 0; position: relative; }
+#cv { box-shadow: 0 0 0 1px #000, 0 6px 30px rgba(0,0,0,.6); image-rendering: auto; cursor: default; }
+.field { display: grid; grid-template-columns: 108px 1fr; gap: 6px; align-items: center; margin-bottom: 5px; }
+.field label { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.field .row { display: flex; gap: 4px; align-items: center; }
+.field .row input[type=text] { flex: 1; min-width: 0; }
+.field input[type=text], .field select { width: 100%; }
+.rectrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.rectrow input { width: 100%; }
+footer { padding: 4px 10px; background: var(--panel); border-top: 1px solid var(--line); color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; }
+.hint { color: var(--dim); font-size: 12px; margin: 4px 0 8px; }
+.badge { display: inline-block; padding: 0 6px; border-radius: 8px; background: var(--panel2); color: var(--dim); font-size: 11px; }
+#drop { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(20,30,50,.85); font-size: 18px; border: 2px dashed var(--accent2); }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; max-width: 640px; }
+dialog::backdrop { background: rgba(0,0,0,.5); }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { max-height: 40vh; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="title">Theme editor</span>
+  <button id="bOpen" class="primary" title="Opens a theme folder (theme.ini, pictures, fonts)">Open folder</button>
+  <button id="bNew" title="Empty theme with the basic elements">New</button>
+  <button id="bImport" title="Loads one or more .ini files of a theme (theme.ini, theme_43.ini, detail.ini, detail_43.ini, screensaver.ini, screensaver_43.ini; another name goes into the current variant): the pictures and fonts of the open folder stay">Import .ini</button>
+  <span class="sep"></span>
+  <label>Variant <select id="variant"></select></label>
+  <button id="bMake43" title="Makes the 4:3 variant (theme_43.ini or detail_43.ini) adapting the current one">Make 4:3</button>
+  <button id="bMakeDetail" title="Makes detail.ini (detail screen, X on the gamepad) from a copy of theme.ini (or detail_43.ini from theme_43.ini)">Make detail</button>
+  <button id="bMakeSaver" title="Makes screensaver.ini (random games after some time without keys) from a copy of detail.ini without the versions (or screensaver_43.ini from detail_43.ini)">Make screensaver</button>
+  <span class="sep"></span>
+  <button id="bSave" title="Writes theme.ini/theme_43.ini in the open folder (Chrome/Edge)">Save to folder</button>
+  <button id="bDownload" title="Downloads the file of the current variant">Download .ini</button>
+  <span class="sep"></span>
+  <label>Zoom <select id="zoom"><option value="0">fit</option><option>0.5</option><option>0.75</option><option>1</option><option>1.5</option><option>2</option></select></label>
+  <label><input type="checkbox" id="grid" checked> grid 8</label>
+  <label title="Shows it as on a 240p CRT: lines halved and doubled"><input type="checkbox" id="crt"> 240p preview</label>
+  <label title="As with Frontier Settings > Themes > Text layout ON: elements with layout=text instead of layout=media"><input type="checkbox" id="textlayout"> text layout</label>
+  <button id="bUndo" title="Undo (Ctrl+Z)">Undo</button>
+  <button id="bHelp">?</button>
+  <input type="file" id="fDir" webkitdirectory multiple hidden>
+  <input type="file" id="fImg" accept="image/png,image/jpeg" multiple hidden>
+  <input type="file" id="fIni" accept=".ini,text/plain" multiple hidden>
+</header>
+<main>
+  <aside id="left">
+    <h3>Elements <span class="badge" id="count"></span></h3>
+    <div class="hint">Top = drawn above. Click on the canvas to pick, click again for the ones below.</div>
+    <ul id="elements"></ul>
+    <div class="toolbar">
+      <select id="addType"><option value="rect">rectangle</option><option value="image">image</option><option value="text">text</option><option value="list">list</option><option value="video">video</option></select>
+      <button id="bAdd">Add</button>
+    </div>
+    <div class="toolbar">
+      <button id="bUp" title="Move up">▲</button><button id="bDown" title="Move down">▼</button>
+      <button id="bDup" title="Duplicate (Ctrl+D)">Duplicate</button><button id="bDel" title="Delete (Del)">Delete</button>
+    </div>
+    <h3>Theme pictures</h3>
+    <div class="hint" id="imgHint">Open a folder to see pictures and fonts.</div>
+    <div class="toolbar"><button id="bAddImg" title="Copies pictures to the img/ folder of the theme">Add pictures…</button></div>
+    <h3>Sample data</h3>
+    <div class="hint">Variables for the preview (<code>name=value</code>). The media <code>@snap</code>, <code>@box</code>… are placeholders; empty = missing media.</div>
+    <textarea id="sample" rows="12"></textarea>
+  </aside>
+  <section id="stage"><canvas id="cv"></canvas><div id="drop">Drop the theme folder here</div></section>
+  <aside id="right"><div id="props"></div></aside>
+</main>
+<footer><span id="status">No theme open</span><span id="pos"></span><span id="selinfo"></span></footer>
+
+<dialog id="help">
+  <h3>How to use it</h3>
+  <p>A theme is a folder in <code>/media/fat/frontier/themes/&lt;name&gt;/</code> with <code>theme.ini</code> (16:9), optionally <code>theme_43.ini</code> (CRT and 4:3 screens), <code>detail.ini</code> / <code>detail_43.ini</code> (detail screen), <code>screensaver.ini</code> / <code>screensaver_43.ini</code> (screensaver: random games after some time without keys), <code>loading.ini</code> / <code>loading_43.ini</code> (loading screen, while a core loads the game: <code>${progress}</code>, <code>type=bar</code>; without them the ones of the simple theme are used), pictures and TTF fonts. The active theme is chosen in <code>/media/fat/frontier/frontier.ini</code> (<code>theme=&lt;name&gt;</code>).</p>
+  <ul>
+    <li><b>Open folder</b>: with Chrome/Edge the theme is saved directly in the folder; with other browsers use <b>Download .ini</b> and copy the file.</li>
+    <li><b>Variant</b> chooses the file to edit; <b>Make 4:3</b>, <b>Make detail</b> and <b>Make screensaver</b> make the missing ones from the current one.</li>
+    <li><b>Import .ini</b> loads .ini files of a theme into the editor (e.g. those of another theme, into the open folder whose pictures and fonts are used): <code>theme.ini</code>, <code>theme_43.ini</code>, <code>detail.ini</code>, <code>detail_43.ini</code>, <code>screensaver.ini</code>, <code>screensaver_43.ini</code> by their name, any other name into the current variant.</li>
+    <li>Drag an element to move it, the handles to resize it; arrows = 1 px, Shift+arrows = 10 px; Shift while dragging = no grid.</li>
+    <li>Coordinates in "base" units (e.g. 1280×720), scaled to the real screen. <code>size</code> of the texts = font height in base px, as in CSS.</li>
+    <li>The preview is approximate: to see it for real copy the theme to the MiSTer (<code>tools/fe/theme_push.sh</code>) and press F5 in Frontier, or use <code>tools/fe/preview/preview.sh</code> on a PC.</li>
+    <li>Animations (fades, scrolling, frames, video) are not animated here.</li>
+  </ul>
+  <p><button onclick="this.closest('dialog').close()">Close</button></p>
+</dialog>
+
+<script>
+'use strict';
+
+/* ======================================================================
+   Model: INI files like the ones read by fe_theme.cpp / fe_render.cpp
+   ====================================================================== */
+
+const TYPES = ['rect', 'image', 'text', 'list', 'video', 'bar'];
+
+// known keys per type (order in the panel and in the file)
+const KEYS = {
+  global: ['name', 'base', 'background', 'background_fit', 'background_color', 'font', 'size', 'font_width', 'font_hinting', 'color', 'shadow'],
+  common: ['type', 'rect', 'if', 'ifnot', 'layout'],
+  rect: ['color', 'gradient'],
+  image: ['src', 'fit', 'align', 'valign', 'transition', 'fps'],
+  text: ['text', 'font', 'size', 'font_width', 'color', 'align', 'valign', 'wrap', 'shadow', 'shadow_offset', 'scroll', 'scroll_speed', 'scroll_delay'],
+  list: ['font', 'size', 'font_width', 'row_height', 'padding', 'color', 'dir_color', 'tag_color', 'tag_dir', 'tag_up', 'sel_background', 'sel_color', 'sel_image', 'sel_scroll', 'scroll_speed', 'scroll_delay', 'scrollbar_width', 'scrollbar_color', 'scrollbar_knob', 'empty_text', 'shadow', 'shadow_offset'],
+  video: ['src', 'fit', 'align', 'valign', 'delay'],
+  bar: ['value', 'color', 'background'],
+};
+
+const KEY_INFO = {
+  name: 'Theme name', base: 'Reference resolution, e.g. 1280x720', background: 'Background picture (theme file)',
+  background_fit: 'cover / contain / stretch', background_color: 'Background color', font: 'TTF font (theme file)',
+  size: 'Font height in base px', color: 'Color', shadow: 'Text shadow color', shadow_offset: 'Shadow offset (base px)',
+  type: 'Element type', rect: 'x, y, width, height', if: 'Visible only if the expanded text is not empty',
+  ifnot: 'Visible only if the expanded text is empty',
+  layout: 'media = only with the pictures, text = only with "Text layout" ON (descriptions in place of the pictures), empty = always',
+  gradient: 'Second color (vertical gradient)',
+  src: 'Theme file or ${media.snap}|${media.title}|img/none.png', fit: 'contain / cover / stretch',
+  align: 'left / center / right', valign: 'top / middle / bottom', transition: 'fade 250 = fade in ms',
+  fps: 'Frames per second (src with *)', text: 'Text with ${variables}', wrap: '1 = wraps',
+  scroll: 'horizontal / vertical: scrolls if it does not fit', scroll_speed: 'base px per second', scroll_delay: 'ms before scrolling',
+  row_height: 'Row height (base px)', padding: 'Inner margin (base px)', dir_color: 'Folder color', tag_color: 'Color of the tags on the right',
+  tag_dir: 'Folder tag', tag_up: 'Tag of ..', sel_background: 'Selection bar color', sel_color: 'Selected text color',
+  sel_image: 'Selection bar picture', sel_scroll: '1 = long selected name scrolls', scrollbar_width: 'Bar width (0 = none)',
+  scrollbar_color: 'Bar color', scrollbar_knob: 'Knob color', empty_text: 'Text if the folder is empty', delay: 'ms before the video starts',
+};
+
+const CHOICES = {
+  type: TYPES, fit: ['contain', 'cover', 'stretch'], background_fit: ['cover', 'contain', 'stretch'],
+  align: ['left', 'center', 'right'], valign: ['top', 'middle', 'bottom'], wrap: ['0', '1'], sel_scroll: ['0', '1'],
+  scroll: ['', 'horizontal', 'vertical'], layout: ['', 'media', 'text'],
+};
+
+const COLOR_KEYS = new Set(['color', 'gradient', 'background_color', 'shadow', 'dir_color', 'tag_color', 'sel_background', 'sel_color', 'scrollbar_color', 'scrollbar_knob']);
+const FILE_KEYS = new Set(['background', 'sel_image', 'src']);
+const FONT_KEYS = new Set(['font']);
+
+function parseIni(text) {
+  const theme = { global: {}, elements: [] };
+  let section = '';
+  for (let line of text.split(/\r?\n/)) {
+    const c = line.search(/[ \t];/);
+    if (c >= 0) line = line.slice(0, c);
+    line = line.trim();
+    if (!line || line[0] === ';' || line[0] === '#') continue;
+    if (line[0] === '[') {
+      const e = line.indexOf(']');
+      section = line.slice(1, e > 0 ? e : undefined).trim();
+      if (section.toLowerCase() !== 'theme') theme.elements.push({ name: section, props: {} });
+      continue;
+    }
+    const eq = line.indexOf('=');
+    if (eq < 0) continue;
+    const k = line.slice(0, eq).trim().toLowerCase(), v = line.slice(eq + 1).trim();
+    if (!section || section.toLowerCase() === 'theme') theme.global[k] = v;
+    else theme.elements[theme.elements.length - 1].props[k] = v;
+  }
+  return theme;
+}
+
+function orderedKeys(props, known) {
+  const keys = known.filter(k => k in props);
+  for (const k of Object.keys(props)) if (!keys.includes(k)) keys.push(k);
+  return keys;
+}
+
+function serializeIni(theme, header) {
+  const out = [];
+  if (header) for (const l of header.split('\n')) out.push('; ' + l);
+  out.push('', '[theme]');
+  for (const k of orderedKeys(theme.global, KEYS.global)) out.push(k + '=' + theme.global[k]);
+  for (const el of theme.elements) {
+    const t = el.props.type || 'rect';
+    out.push('', '[' + el.name + ']');
+    for (const k of orderedKeys(el.props, KEYS.common.concat(KEYS[t] || []))) {
+      if (el.props[k] !== '' || k === 'text') out.push(k + '=' + el.props[k]);
+    }
+  }
+  return out.join('\n') + '\n';
+}
+
+function parseBase(s) {
+  const m = /(\d+)\s*[x,]\s*(\d+)/.exec(s || '');
+  return m ? [+m[1], +m[2]] : [1280, 720];
+}
+
+function parseRect(s) {
+  const v = (s || '').split(',').map(x => parseInt(x, 10));
+  return [0, 1, 2, 3].map(i => Number.isFinite(v[i]) ? v[i] : 0);
+}
+
+// "#RRGGBB" / "#RRGGBBAA" -> CSS string
+function cssColor(s, def) {
+  const m = /^#?([0-9a-f]{6})([0-9a-f]{2})?$/i.exec((s || '').trim());
+  if (!m) return def;
+  const n = parseInt(m[1], 16), a = m[2] ? parseInt(m[2], 16) / 255 : 1;
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a.toFixed(3)})`;
+}
+
+function expand(t, vars) {
+  return (t || '').replace(/\$\{([^}]*)\}/g, (_, k) => vars[k] ?? '');
+}
+
+/* ======================================================================
+   State
+   ====================================================================== */
+
+const VARIANTS = ['theme.ini', 'theme_43.ini', 'detail.ini', 'detail_43.ini', 'screensaver.ini', 'screensaver_43.ini', 'loading.ini', 'loading_43.ini'];
+
+const S = {
+  files: new Map(),        // path relative to the theme -> File
+  urls: new Map(),         // path -> loaded HTMLImageElement
+  fonts: new Map(),        // path -> CSS family
+  dir: null,               // FileSystemDirectoryHandle (Chrome/Edge)
+  folderName: '',
+  variants: {},            // 'theme.ini' -> theme
+  headers: {},             // leading comments
+  cur: 'theme.ini',
+  sel: -1,                 // -1 = [theme]
+  undo: [],
+  dirty: false,
+};
+
+const DEFAULT_SAMPLE = `title=Arcade
+folder=Arcade
+pos=14/2206
+count=2206
+system=arcade
+system.name=Arcade
+progress=63
+loading.file=1942.zip
+game.name=1942 (Revision B)
+game.title=1942 (Revision B)
+game.file=1942 (Revision B).mra
+game.date=
+game.desc=1942 is a vertical scrolling shooter set in the Pacific during World War II: the player flies the "Super Ace" and must shoot down waves of enemy planes avoiding their bullets.
+game.year=1984
+game.released=01/01/1984
+game.developer=Capcom
+game.publisher=Capcom
+game.genre=Shooter / Flying Vertical
+game.players=2
+game.rating=0.80
+game.stars=★★★★☆
+game.favorite=1
+message=
+jump=
+version=1942 (Revision B)
+versions.status=
+media.system=
+media.snap=@snap
+media.box=@box
+media.title=@title
+media.marquee=@marquee
+media.fanart=
+media.video=@video`;
+
+const SAMPLE_LIST = [
+  ['..', 1], ['alternatives', 1], ['Cave CV1000', 1], ['ST-V', 1], ['005', 0], ['1 on 1 Government (Japan)', 0],
+  ['18 Challenge Pro Golf (DECO)', 0], ['1941 Counter Attack (World 900227)', 0], ['1942 (Revision B)', 0],
+  ['1943 Kai Midway Kaisen (Japan)', 0], ['1943 The Battle of Midway (Euro)', 0], ['1944 The Loop Master (Europe 000620)', 0],
+  ['19XX The War Against Destiny (Europe 960104)', 0], ['4D Warriors (315-5162)', 0], ['Aero Fighters', 0], ['After Burner II', 0],
+  ['Alien Syndrome', 0], ['Altered Beast', 0], ['Arkanoid', 0], ['Bomb Jack', 0], ['Bubble Bobble', 0], ['Commando', 0],
+];
+const SAMPLE_SEL = 8;
+
+function sampleVars() {
+  const vars = {};
+  for (const line of document.getElementById('sample').value.split('\n')) {
+    const eq = line.indexOf('=');
+    if (eq > 0) vars[line.slice(0, eq).trim()] = line.slice(eq + 1);
+  }
+  return vars;
+}
+
+function theme() { return S.variants[S.cur]; }
+function selected() { return S.sel >= 0 ? theme().elements[S.sel] : null; }
+
+function snapshot() {
+  S.undo.push(JSON.stringify({ variants: S.variants, cur: S.cur, sel: S.sel }));
+  if (S.undo.length > 100) S.undo.shift();
+  S.dirty = true;
+}
+
+function undo() {
+  const s = S.undo.pop();
+  if (!s) return;
+  const o = JSON.parse(s);
+  S.variants = o.variants; S.cur = o.cur; S.sel = o.sel;
+  refreshAll();
+}
+
+/* ======================================================================
+   Placeholders for the media and loading of the theme files
+   ====================================================================== */
+
+const placeholders = {};
+function placeholder(kind) {
+  if (placeholders[kind]) return placeholders[kind];
+  const size = { snap: [320, 240], title: [320, 240], box: [300, 420], marquee: [512, 128], fanart: [640, 360], video: [320, 240] }[kind] || [320, 240];
+  const c = document.createElement('canvas');
+  c.width = size[0]; c.height = size[1];
+  const g = c.getContext('2d');
+  const hue = { snap: 210, title: 160, box: 20, marquee: 300, fanart: 260, video: 0 }[kind] || 200;
+  const grad = g.createLinearGradient(0, 0, c.width, c.height);
+  grad.addColorStop(0, `hsl(${hue},55%,38%)`); grad.addColorStop(1, `hsl(${hue + 40},55%,22%)`);
+  g.fillStyle = grad; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = 'rgba(255,255,255,.12)';
+  for (let x = 0; x < c.width; x += 16) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, c.height); g.stroke(); }
+  g.fillStyle = 'rgba(255,255,255,.85)'; g.font = 'bold 28px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(kind === 'video' ? '▶ VIDEO' : kind.toUpperCase(), c.width / 2, c.height / 2);
+  placeholders[kind] = c;
+  return c;
+}
+
+function normPath(p) {
+  const parts = [];
+  for (const x of p.split('/')) { if (x === '..') parts.pop(); else if (x && x !== '.') parts.push(x); }
+  return parts.join('/');
+}
+
+// picture of a theme file (loaded asynchronously, then redraws)
+function themeImage(path) {
+  path = normPath(path);
+  if (S.urls.has(path)) return S.urls.get(path);
+  const f = S.files.get(path);
+  if (!f) return null;
+  const img = new Image();
+  img.onload = () => render();
+  img.src = URL.createObjectURL(f);
+  S.urls.set(path, img);
+  return img;
+}
+
+function globFiles(pattern) {
+  const re = new RegExp('^' + normPath(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]') + '$');
+  return [...S.files.keys()].filter(k => re.test(k)).sort();
+}
+
+async function loadFont(path) {
+  path = normPath(path);
+  if (S.fonts.has(path)) return S.fonts.get(path);
+  const f = S.files.get(path);
+  if (!f) return null;
+  const family = 'thm_' + path.replace(/[^a-z0-9]/gi, '_');
+  S.fonts.set(path, family);
+  try {
+    const face = new FontFace(family, await f.arrayBuffer());
+    await face.load();
+    document.fonts.add(face);
+  } catch (e) {
+    console.warn('font', path, e);
+  }
+  render();
+  return family;
+}
+
+function fontFamily(spec) {
+  spec = spec || theme().global.font || '';
+  if (!spec) return 'sans-serif';
+  const p = normPath(spec);
+  if (!S.fonts.has(p)) { loadFont(p); return 'sans-serif'; }
+  return `"${S.fonts.get(p)}", sans-serif`;
+}
+
+/* ======================================================================
+   Drawing (same rules as fe_render.cpp, as far as possible)
+   ====================================================================== */
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let view = { scale: 1, bw: 1280, bh: 720 };
+
+function fitRect(iw, ih, x, y, w, h, fit) {
+  if (fit === 'stretch') return { sx: 0, sy: 0, sw: iw, sh: ih, dx: x, dy: y, dw: w, dh: h };
+  if (fit === 'cover') {
+    let sw = iw, sh = ih, sx = 0, sy = 0;
+    if (iw * h > ih * w) { sw = w * ih / h; sx = (iw - sw) / 2; } else { sh = h * iw / w; sy = (ih - sh) / 2; }
+    return { sx, sy, sw, sh, dx: x, dy: y, dw: w, dh: h };
+  }
+  let dw = w, dh = h;
+  if (iw * h > ih * w) dh = ih * w / iw; else dw = iw * h / ih;
+  return { sx: 0, sy: 0, sw: iw, sh: ih, dx: x, dy: y, dw, dh };
+}
+
+function alignNum(s, def) {
+  s = (s || def || '').toLowerCase();
+  return (s === 'center' || s === 'middle') ? 1 : (s === 'right' || s === 'bottom') ? 2 : 0;
+}
+
+function drawImageFit(img, iw, ih, r, p, defAlign) {
+  const f = fitRect(iw, ih, r[0], r[1], r[2], r[3], (p.fit || 'contain').toLowerCase());
+  const ax = alignNum(p.align, defAlign), ay = alignNum(p.valign, 'middle');
+  f.dx = r[0] + (r[2] - f.dw) * ax / 2;
+  f.dy = r[1] + (r[3] - f.dh) * ay / 2;
+  ctx.drawImage(img, f.sx, f.sy, f.sw, f.sh, f.dx, f.dy, f.dw, f.dh);
+}
+
+function setFont(p, px) {
+  ctx.font = `${px}px ${fontFamily(p.font)}`;
+  const m = ctx.measureText('Ag');
+  const asc = m.fontBoundingBoxAscent ?? px * 0.93, desc = m.fontBoundingBoxDescent ?? px * 0.24;
+  return { asc, lh: asc + desc };
+}
+
+function ellipsize(s, maxw) {
+  if (ctx.measureText(s).width <= maxw) return s;
+  let t = s;
+  while (t.length && ctx.measureText(t + '...').width > maxw) t = t.slice(0, -1).trimEnd();
+  return t ? t + '...' : '';
+}
+
+function drawString(s, x, y, color, shadow, sd) {
+  if (shadow) { ctx.fillStyle = shadow; ctx.fillText(s, x + sd, y + sd); }
+  ctx.fillStyle = color;
+  ctx.fillText(s, x, y);
+}
+
+function resolveSrc(src, vars) {
+  for (let alt of (src || '').split('|')) {
+    alt = alt.trim();
+    if (alt.includes('${')) { const v = expand(alt, vars); if (v) return v; }
+    else if (alt) return alt;
+  }
+  return '';
+}
+
+// "Text layout" of Frontier's settings: elements with layout=text instead of layout=media
+let textLayout = false;
+
+function visible(p, vars) {
+  if ((p.layout || '').toLowerCase() === (textLayout ? 'media' : 'text')) return false;
+  return (!p.if || expand(p.if, vars) !== '') && (!p.ifnot || expand(p.ifnot, vars) === '');
+}
+
+function drawElement(el, vars) {
+  const p = el.props, g = theme().global;
+  const t = (p.type || 'rect').toLowerCase();
+  const r = parseRect(p.rect);
+  if (!visible(p, vars)) return;
+  const defColor = cssColor(g.color, 'rgb(240,240,240)');
+  const shadow = cssColor(p.shadow || g.shadow, null);
+  const sd = Math.max(1, +(p.shadow_offset || 2));
+
+  ctx.save();
+  if (t === 'rect') {
+    const c1 = cssColor(p.color, 'rgba(0,0,0,1)');
+    if (p.gradient) {
+      const gr = ctx.createLinearGradient(0, r[1], 0, r[1] + r[3]);
+      gr.addColorStop(0, c1); gr.addColorStop(1, cssColor(p.gradient, c1));
+      ctx.fillStyle = gr;
+    } else ctx.fillStyle = c1;
+    ctx.fillRect(r[0], r[1], r[2], r[3]);
+  } else if (t === 'bar') {
+    // progress bar (loading.ini): value= percent of the width in color
+    const pct = Math.max(0, Math.min(100, parseInt(expand(p.value || '', vars), 10) || 0));
+    if (p.background) { ctx.fillStyle = cssColor(p.background, 'rgba(0,0,0,0)'); ctx.fillRect(r[0], r[1], r[2], r[3]); }
+    ctx.fillStyle = cssColor(p.color, 'rgb(255,192,64)');
+    ctx.fillRect(r[0], r[1], r[2] * pct / 100, r[3]);
+  } else if (t === 'image' || t === 'video') {
+    let src = resolveSrc(p.src, vars);
+    let img = null, iw = 0, ih = 0;
+    if (src.startsWith('@')) { img = placeholder(src.slice(1)); iw = img.width; ih = img.height; }
+    else if (src) {
+      const path = src.includes('*') ? globFiles(src)[0] : src;
+      img = path ? themeImage(path) : null;
+      if (img && img.complete && img.naturalWidth) { iw = img.naturalWidth; ih = img.naturalHeight; } else img = null;
+    }
+    if (img) drawImageFit(img, iw, ih, r, p, 'center');
+    else if (src && !src.startsWith('@')) { ctx.strokeStyle = '#e5484d'; ctx.setLineDash([4, 4]); ctx.strokeRect(r[0] + .5, r[1] + .5, r[2], r[3]); }
+  } else if (t === 'text') {
+    const px = +(p.size || g.size || 24);
+    const { asc, lh } = setFont(p, px);
+    const txt = expand(p.text, vars);
+    const color = cssColor(p.color, defColor);
+    let lines = [];
+    if (+p.wrap) {
+      for (const para of txt.split('\n')) {
+        let line = '';
+        for (const w of para.split(' ')) {
+          const test = line ? line + ' ' + w : w;
+          if (line && ctx.measureText(test).width > r[2]) { lines.push(line); line = w; } else line = test;
+        }
+        lines.push(line);
+      }
+    } else lines = [txt];
+    const maxl = Math.max(1, Math.floor(r[3] / lh));
+    if (lines.length > maxl) { lines = lines.slice(0, maxl); lines[maxl - 1] += '...'; }
+    const total = lines.length * lh;
+    let y = r[1];
+    const va = alignNum(p.valign, 'middle'), ha = alignNum(p.align, 'left');
+    if (va === 1) y += (r[3] - total) / 2; else if (va === 2) y += r[3] - total;
+    ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip();
+    for (const l of lines) {
+      const s = ellipsize(l, r[2]);
+      const w = ctx.measureText(s).width;
+      drawString(s, r[0] + (r[2] - w) * ha / 2, y + asc, color, shadow, sd);
+      y += lh;
+    }
+  } else if (t === 'list') {
+    const px = +(p.size || g.size || 24);
+    const { asc, lh } = setFont(p, px);
+    const rowH = Math.max(lh + 1, +(p.row_height || 0));
+    const pad = +(p.padding ?? 8);
+    const rows = Math.max(1, Math.floor(r[3] / rowH));
+    const sbw = +(p.scrollbar_width ?? 6);
+    const count = SAMPLE_LIST.length;
+    const sb = count > rows && sbw ? sbw + pad : 0;
+    const rowW = r[2] - sb;
+    const top = Math.max(0, Math.min(SAMPLE_SEL - Math.floor(rows / 2), count - rows));
+    const color = cssColor(p.color, defColor);
+    const selImg = p.sel_image ? themeImage(p.sel_image) : null;
+    for (let i = 0; i < rows && top + i < count; i++) {
+      const [label, dir] = SAMPLE_LIST[top + i];
+      const y = r[1] + i * rowH;
+      const isSel = top + i === SAMPLE_SEL;
+      if (isSel) {
+        if (selImg && selImg.complete && selImg.naturalWidth) ctx.drawImage(selImg, r[0], y, rowW, rowH);
+        else { ctx.fillStyle = cssColor(p.sel_background, 'rgb(47,95,179)'); ctx.fillRect(r[0], y, rowW, rowH); }
+      }
+      const ty = y + (rowH - lh) / 2 + asc;
+      let right = r[0] + rowW - pad;
+      const tag = dir ? (label === '..' ? (p.tag_up || '') : (p.tag_dir || '')) : '';
+      if (tag) {
+        const tw = ctx.measureText(tag).width;
+        drawString(tag, right - tw, ty, isSel ? cssColor(p.sel_color, '#fff') : cssColor(p.tag_color, color), shadow, sd);
+        right -= tw + lh;
+      }
+      const c = isSel ? cssColor(p.sel_color, '#fff') : dir ? cssColor(p.dir_color, color) : color;
+      drawString(ellipsize(label, right - r[0] - pad), r[0] + pad, ty, c, shadow, sd);
+    }
+    if (sb) {
+      const sx = r[0] + r[2] - sbw, sh = rows * rowH;
+      const knob = Math.max(sbw * 2, sh * rows / count), pos = (sh - knob) * top / Math.max(1, count - rows);
+      ctx.fillStyle = cssColor(p.scrollbar_color, 'rgb(58,74,102)'); ctx.fillRect(sx, r[1], sbw, sh);
+      ctx.fillStyle = cssColor(p.scrollbar_knob, 'rgb(140,160,192)'); ctx.fillRect(sx, r[1] + pos, sbw, knob);
+    }
+  }
+  ctx.restore();
+}
+
+function render() {
+  const th = theme();
+  if (!th) return;
+  const [bw, bh] = parseBase(th.global.base);
+  view.bw = bw; view.bh = bh;
+  const crt = document.getElementById('crt').checked;
+  const z = +document.getElementById('zoom').value;
+  const stage = document.getElementById('stage');
+  const scale = z || Math.min((stage.clientWidth - 24) / bw, (stage.clientHeight - 24) / bh);
+  view.scale = scale;
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.width = Math.round(bw * scale) + 'px';
+  cv.style.height = Math.round(bh * scale) + 'px';
+  cv.width = Math.round(bw * scale * dpr);
+  cv.height = Math.round(bh * scale * dpr);
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  ctx.imageSmoothingQuality = 'high';
+
+  const vars = sampleVars();
+  ctx.fillStyle = cssColor(th.global.background_color, '#000');
+  ctx.fillRect(0, 0, bw, bh);
+  if (th.global.background) {
+    const img = themeImage(th.global.background);
+    if (img && img.complete && img.naturalWidth) {
+      const f = fitRect(img.naturalWidth, img.naturalHeight, 0, 0, bw, bh, (th.global.background_fit || 'cover').toLowerCase());
+      ctx.drawImage(img, f.sx, f.sy, f.sw, f.sh, f.dx + (bw - f.dw) / 2, f.dy + (bh - f.dh) / 2, f.dw, f.dh);
+    }
+  }
+  for (const el of th.elements) drawElement(el, vars);
+
+  if (crt) crtFilter(bw, bh, scale * dpr);
+
+  // grid and selection
+  if (document.getElementById('grid').checked && scale >= 0.5) {
+    ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1 / scale;
+    ctx.beginPath();
+    for (let x = 0; x <= bw; x += 32) { ctx.moveTo(x, 0); ctx.lineTo(x, bh); }
+    for (let y = 0; y <= bh; y += 32) { ctx.moveTo(0, y); ctx.lineTo(bw, y); }
+    ctx.stroke();
+  }
+  const el = selected();
+  if (el) {
+    const r = parseRect(el.props.rect);
+    ctx.lineWidth = 1.5 / scale;
+    ctx.strokeStyle = '#ffb000'; ctx.setLineDash([6 / scale, 4 / scale]);
+    ctx.strokeRect(r[0], r[1], r[2], r[3]);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffb000';
+    for (const [hx, hy] of handles(r)) ctx.fillRect(hx - 4 / scale, hy - 4 / scale, 8 / scale, 8 / scale);
+  }
+  updateStatus();
+}
+
+// 240p: average of two canvas lines and lines doubled, as on the CRT
+function crtFilter(bw, bh, k) {
+  const W = cv.width, H = cv.height;
+  const lines = 240;
+  const tmp = document.createElement('canvas');
+  tmp.width = Math.round(W * 640 / (bw * k)) || 640; tmp.height = lines;
+  const t = tmp.getContext('2d');
+  t.imageSmoothingQuality = 'high';
+  t.drawImage(cv, 0, 0, tmp.width, tmp.height);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tmp, 0, 0, W, H);
+  ctx.restore();
+}
+
+/* ======================================================================
+   Canvas interaction
+   ====================================================================== */
+
+function handles(r) {
+  const [x, y, w, h] = r;
+  return [[x, y], [x + w / 2, y], [x + w, y], [x + w, y + h / 2], [x + w, y + h], [x + w / 2, y + h], [x, y + h], [x, y + h / 2]];
+}
+const HANDLE_DIR = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
+const HANDLE_CURSOR = ['nwse-resize', 'ns-resize', 'nesw-resize', 'ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize', 'ew-resize'];
+
+function toBase(ev) {
+  const b = cv.getBoundingClientRect();
+  return [(ev.clientX - b.left) / view.scale, (ev.clientY - b.top) / view.scale];
+}
+
+function hitHandle(x, y) {
+  const el = selected();
+  if (!el) return -1;
+  const tol = 7 / view.scale;
+  const hs = handles(parseRect(el.props.rect));
+  for (let i = 0; i < hs.length; i++) if (Math.abs(hs[i][0] - x) <= tol && Math.abs(hs[i][1] - y) <= tol) return i;
+  return -1;
+}
+
+function elementsAt(x, y) {
+  const els = theme().elements, out = [];
+  for (let i = els.length - 1; i >= 0; i--) {
+    const r = parseRect(els[i].props.rect);
+    if (x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3]) out.push(i);
+  }
+  return out;
+}
+
+let drag = null;
+let lastClick = { x: -1, y: -1, list: [], idx: 0 };
+
+function snapv(v, ev) {
+  return (document.getElementById('grid').checked && !ev.shiftKey) ? Math.round(v / 8) * 8 : Math.round(v);
+}
+
+cv.addEventListener('mousedown', ev => {
+  if (!theme()) return;
+  const [x, y] = toBase(ev);
+  const h = hitHandle(x, y);
+  if (h >= 0) {
+    snapshot();
+    drag = { mode: 'resize', h, start: [x, y], rect: parseRect(selected().props.rect) };
+    return;
+  }
+  const list = elementsAt(x, y);
+  if (!list.length) { select(-1); return; }
+  // repeated click on the same point: element below
+  let idx = 0;
+  if (Math.abs(lastClick.x - x) < 3 && Math.abs(lastClick.y - y) < 3 && list.join() === lastClick.list.join()) idx = (lastClick.idx + 1) % list.length;
+  else if (list.includes(S.sel)) idx = list.indexOf(S.sel);
+  lastClick = { x, y, list, idx };
+  select(list[idx]);
+  snapshot();
+  drag = { mode: 'move', start: [x, y], rect: parseRect(selected().props.rect), moved: false };
+});
+
+window.addEventListener('mousemove', ev => {
+  if (!theme()) return;
+  const [x, y] = toBase(ev);
+  document.getElementById('pos').textContent = `x ${Math.round(x)}  y ${Math.round(y)}`;
+  if (!drag) {
+    const h = hitHandle(x, y);
+    cv.style.cursor = h >= 0 ? HANDLE_CURSOR[h] : (elementsAt(x, y).length ? 'move' : 'default');
+    return;
+  }
+  const dx = x - drag.start[0], dy = y - drag.start[1];
+  let [rx, ry, rw, rh] = drag.rect;
+  if (drag.mode === 'move') {
+    rx = snapv(rx + dx, ev); ry = snapv(ry + dy, ev);
+    drag.moved = drag.moved || Math.abs(dx) + Math.abs(dy) > 1;
+  } else {
+    const [hx, hy] = HANDLE_DIR[drag.h];
+    if (hx < 0) { const nx = snapv(rx + dx, ev); rw = rw + (rx - nx); rx = nx; }
+    if (hx > 0) rw = snapv(rx + rw + dx, ev) - rx;
+    if (hy < 0) { const ny = snapv(ry + dy, ev); rh = rh + (ry - ny); ry = ny; }
+    if (hy > 0) rh = snapv(ry + rh + dy, ev) - ry;
+    rw = Math.max(1, rw); rh = Math.max(1, rh);
+  }
+  selected().props.rect = [rx, ry, rw, rh].join(',');
+  render();
+  updateRectFields();
+});
+
+window.addEventListener('mouseup', () => {
+  if (drag && drag.mode === 'move' && !drag.moved) S.undo.pop();  // selection only
+  drag = null;
+});
+
+window.addEventListener('keydown', ev => {
+  const tag = (ev.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === 'z') { undo(); ev.preventDefault(); return; }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === 'd') { duplicate(); ev.preventDefault(); return; }
+  const el = selected();
+  if (!el) return;
+  if (ev.key === 'Delete' || ev.key === 'Backspace') { remove(); ev.preventDefault(); return; }
+  const step = ev.shiftKey ? 10 : 1;
+  const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
+  if (d) {
+    snapshot();
+    const r = parseRect(el.props.rect);
+    el.props.rect = [r[0] + d[0], r[1] + d[1], r[2], r[3]].join(',');
+    render(); updateRectFields(); ev.preventDefault();
+  }
+});
+
+/* ======================================================================
+   Panels
+   ====================================================================== */
+
+function select(i) {
+  S.sel = i;
+  refreshList();
+  refreshProps();
+  render();
+}
+
+function refreshList() {
+  const ul = document.getElementById('elements');
+  ul.innerHTML = '';
+  const th = theme();
+  if (!th) return;
+  const vars = sampleVars();
+  const add = (label, type, idx, hidden) => {
+    const li = document.createElement('li');
+    li.className = (idx === S.sel ? 'sel ' : '') + (hidden ? 'hidden-el' : '');
+    li.innerHTML = `<span></span><span class="t"></span>`;
+    li.children[0].textContent = label;
+    li.children[1].textContent = type;
+    li.onclick = () => select(idx);
+    ul.appendChild(li);
+  };
+  add('[theme]', 'globale', -1);
+  for (let i = th.elements.length - 1; i >= 0; i--) {
+    const el = th.elements[i];
+    add(el.name, el.props.type || 'rect', i, !visible(el.props, vars));
+  }
+  document.getElementById('count').textContent = th.elements.length;
+}
+
+function field(container, key, value, onchange, opts = {}) {
+  const div = document.createElement('div');
+  div.className = 'field';
+  const lab = document.createElement('label');
+  lab.textContent = key;
+  lab.title = KEY_INFO[key] || key;
+  div.appendChild(lab);
+  const row = document.createElement('div');
+  row.className = 'row';
+  let input;
+  if (CHOICES[key]) {
+    input = document.createElement('select');
+    const opts2 = CHOICES[key].includes(value) || value === undefined || value === '' ? CHOICES[key] : [value].concat(CHOICES[key]);
+    for (const c of ['', ...opts2.filter(x => x !== '')]) {
+      const o = document.createElement('option'); o.value = c; o.textContent = c || '(default)'; input.appendChild(o);
+    }
+    input.value = value ?? '';
+  } else {
+    input = document.createElement('input');
+    input.type = 'text';
+    input.value = value ?? '';
+    input.placeholder = opts.placeholder || '';
+    if (FILE_KEYS.has(key) || FONT_KEYS.has(key)) input.setAttribute('list', FONT_KEYS.has(key) ? 'dlFonts' : 'dlImages');
+  }
+  input.title = KEY_INFO[key] || '';
+  input.addEventListener('change', () => { snapshot(); onchange(input.value); });
+  if (input.tagName === 'INPUT') input.addEventListener('input', () => { onchange(input.value, true); });
+  row.appendChild(input);
+  if (COLOR_KEYS.has(key)) {
+    const col = document.createElement('input');
+    col.type = 'color';
+    const m = /^#?([0-9a-f]{6})/i.exec(value || '');
+    col.value = m ? '#' + m[1] : '#ffffff';
+    col.addEventListener('input', () => {
+      const a = (/^#?[0-9a-f]{6}([0-9a-f]{2})$/i.exec(input.value) || [])[1] || '';
+      input.value = col.value.toUpperCase() + a;
+      onchange(input.value, true);
+    });
+    col.addEventListener('change', () => { snapshot(); onchange(input.value); });
+    row.appendChild(col);
+  }
+  div.appendChild(row);
+  container.appendChild(div);
+  return input;
+}
+
+function updateRectFields() {
+  const el = selected();
+  if (!el) return;
+  const r = parseRect(el.props.rect);
+  document.querySelectorAll('.rectrow input').forEach((inp, i) => { inp.value = r[i]; });
+  updateStatus();
+}
+
+function refreshProps() {
+  const box = document.getElementById('props');
+  box.innerHTML = '';
+  const th = theme();
+  if (!th) { box.innerHTML = '<p class="hint">Open a theme folder or make a new theme.</p>'; return; }
+
+  const set = (obj, key) => (v, live) => {
+    if (v === '') delete obj[key]; else obj[key] = v;
+    render();
+    if (!live) refreshList();
+  };
+
+  const el = selected();
+  if (!el) {
+    const h = document.createElement('h3'); h.textContent = 'Theme [theme]'; box.appendChild(h);
+    for (const k of KEYS.global) field(box, k, th.global[k], set(th.global, k));
+    extraKeys(box, th.global, KEYS.global);
+    return;
+  }
+
+  const h = document.createElement('h3'); h.textContent = 'Element'; box.appendChild(h);
+  const nameField = field(box, 'name', el.name, v => { el.name = v.replace(/[\[\]]/g, '') || el.name; refreshList(); });
+  nameField.title = 'Name of the [name] section in the file';
+  field(box, 'type', el.props.type || 'rect', v => { el.props.type = v || 'rect'; render(); refreshList(); refreshProps(); });
+
+  // rect as 4 numbers
+  const div = document.createElement('div');
+  div.className = 'field';
+  div.innerHTML = '<label title="x, y, width, height">rect</label><div class="rectrow"></div>';
+  const rr = div.querySelector('.rectrow');
+  const r = parseRect(el.props.rect);
+  ['x', 'y', 'l', 'a'].forEach((n, i) => {
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.value = r[i]; inp.title = ['x', 'y', 'width', 'height'][i];
+    inp.addEventListener('change', () => {
+      snapshot();
+      const cur = parseRect(el.props.rect); cur[i] = parseInt(inp.value, 10) || 0;
+      el.props.rect = cur.join(','); render();
+    });
+    rr.appendChild(inp);
+  });
+  box.appendChild(div);
+  field(box, 'if', el.props.if, set(el.props, 'if'), { placeholder: '${media.snap}' });
+  field(box, 'ifnot', el.props.ifnot, set(el.props, 'ifnot'));
+  field(box, 'layout', el.props.layout, set(el.props, 'layout'));
+
+  const t = (el.props.type || 'rect').toLowerCase();
+  const h2 = document.createElement('h3'); h2.textContent = t; box.appendChild(h2);
+  for (const k of KEYS[t] || []) field(box, k, el.props[k], set(el.props, k));
+  extraKeys(box, el.props, KEYS.common.concat(KEYS[t] || []));
+}
+
+// unknown keys: editable as text
+function extraKeys(box, obj, known) {
+  const extra = Object.keys(obj).filter(k => !known.includes(k));
+  const h = document.createElement('h3'); h.textContent = 'Other keys'; box.appendChild(h);
+  const ta = document.createElement('textarea');
+  ta.rows = Math.max(2, extra.length + 1);
+  ta.value = extra.map(k => k + '=' + obj[k]).join('\n');
+  ta.placeholder = 'key=value';
+  ta.addEventListener('change', () => {
+    snapshot();
+    for (const k of extra) delete obj[k];
+    for (const line of ta.value.split('\n')) {
+      const eq = line.indexOf('=');
+      if (eq > 0) obj[line.slice(0, eq).trim().toLowerCase()] = line.slice(eq + 1).trim();
+    }
+    render(); refreshProps();
+  });
+  box.appendChild(ta);
+}
+
+function refreshDatalists() {
+  for (const [id, re] of [['dlImages', /\.(png|jpe?g)$/i], ['dlFonts', /\.(ttf|otf)$/i]]) {
+    let dl = document.getElementById(id);
+    if (!dl) { dl = document.createElement('datalist'); dl.id = id; document.body.appendChild(dl); }
+    dl.innerHTML = '';
+    const list = [...S.files.keys()].filter(k => re.test(k)).sort();
+    if (id === 'dlImages') list.unshift('${media.system}|${media.snap}|${media.title}', '${media.box}', '${media.marquee}', '${media.fanart}', '${media.video}');
+    for (const k of list) { const o = document.createElement('option'); o.value = k; dl.appendChild(o); }
+  }
+  const imgs = [...S.files.keys()].filter(k => /\.(png|jpe?g)$/i.test(k));
+  const fonts = [...S.files.keys()].filter(k => /\.(ttf|otf)$/i.test(k));
+  document.getElementById('imgHint').textContent = S.files.size
+    ? `${imgs.length} pictures, ${fonts.length} fonts in the folder "${S.folderName}".`
+    : 'Open a folder to see pictures and fonts.';
+}
+
+function refreshVariants() {
+  const sel = document.getElementById('variant');
+  sel.innerHTML = '';
+  for (const k of VARIANTS.filter(v => S.variants[v]).concat(Object.keys(S.variants).filter(v => !VARIANTS.includes(v)))) {
+    const o = document.createElement('option'); o.value = o.textContent = k; sel.appendChild(o);
+  }
+  sel.value = S.cur;
+  document.getElementById('bMake43').disabled = S.cur.endsWith('_43.ini') || !!S.variants[S.cur.replace('.ini', '_43.ini')];
+  document.getElementById('bMakeDetail').disabled = !S.cur.startsWith('theme') || !!S.variants[S.cur.replace('theme', 'detail')];
+  document.getElementById('bMakeSaver').disabled = !S.cur.startsWith('detail') || !!S.variants[S.cur.replace('detail', 'screensaver')];
+  document.getElementById('bSave').disabled = !S.dir;
+}
+
+function refreshAll() {
+  refreshVariants();
+  refreshDatalists();
+  refreshList();
+  refreshProps();
+  render();
+}
+
+function updateStatus() {
+  const th = theme();
+  const st = document.getElementById('status');
+  if (!th) { st.textContent = 'No theme open'; return; }
+  st.textContent = `${S.folderName || 'new theme'} · ${S.cur} · base ${view.bw}×${view.bh}` + (S.dirty ? ' · modified' : '');
+  const el = selected();
+  document.getElementById('selinfo').textContent = el ? `[${el.name}] ${el.props.type || 'rect'} ${parseRect(el.props.rect).join(', ')}` : '';
+}
+
+/* ======================================================================
+   Elements: add, move, duplicate, delete
+   ====================================================================== */
+
+function uniqueName(base) {
+  const names = new Set(theme().elements.map(e => e.name));
+  let n = base, i = 2;
+  while (names.has(n)) n = base + '_' + i++;
+  return n;
+}
+
+const NEW_PROPS = {
+  rect: { color: '#1C2A44E0' },
+  image: { src: '${media.snap}|${media.title}', fit: 'contain', transition: 'fade 250' },
+  text: { text: '${game.title}', size: '28', color: '#FFFFFF' },
+  list: { size: '24', row_height: '36', padding: '10', sel_background: '#2F5FB3', sel_color: '#FFFFFF', tag_dir: '>', tag_up: '<', sel_scroll: '1' },
+  video: { src: '${media.video}', fit: 'contain', delay: '1500' },
+  bar: { value: '${progress}', color: '#FFC040', background: '#1C2A44' },
+};
+
+function addElement() {
+  if (!theme()) return;
+  snapshot();
+  const t = document.getElementById('addType').value;
+  const [bw, bh] = parseBase(theme().global.base);
+  const el = { name: uniqueName(t), props: Object.assign({ type: t, rect: [Math.round(bw / 4), Math.round(bh / 4), Math.round(bw / 3), Math.round(bh / 4)].join(',') }, NEW_PROPS[t]) };
+  const at = S.sel >= 0 ? S.sel + 1 : theme().elements.length;
+  theme().elements.splice(at, 0, el);
+  select(at);
+}
+
+function move(d) {
+  const els = theme().elements, i = S.sel, j = i + d;
+  if (i < 0 || j < 0 || j >= els.length) return;
+  snapshot();
+  [els[i], els[j]] = [els[j], els[i]];
+  select(j);
+}
+
+function duplicate() {
+  const el = selected();
+  if (!el) return;
+  snapshot();
+  const copy = JSON.parse(JSON.stringify(el));
+  copy.name = uniqueName(el.name);
+  const r = parseRect(copy.props.rect);
+  copy.props.rect = [r[0] + 16, r[1] + 16, r[2], r[3]].join(',');
+  theme().elements.splice(S.sel + 1, 0, copy);
+  select(S.sel + 1);
+}
+
+function remove() {
+  if (S.sel < 0) return;
+  snapshot();
+  theme().elements.splice(S.sel, 1);
+  select(Math.min(S.sel, theme().elements.length - 1));
+}
+
+/* ======================================================================
+   Files: open, new, save
+   ====================================================================== */
+
+// leading comments of an .ini file
+function iniHeader(text) {
+  const head = [];
+  for (const l of text.split(/\r?\n/)) { if (/^\s*[;#]/.test(l)) head.push(l.replace(/^\s*[;#]\s?/, '')); else if (l.trim()) break; else if (head.length) head.push(''); }
+  return head.join('\n').trim();
+}
+
+async function loadFiles(entries, name) {
+  // entries: [path relative to the theme folder, File]
+  S.files = new Map(entries);
+  S.urls = new Map();
+  S.fonts = new Map();
+  S.folderName = name;
+  S.variants = {}; S.headers = {};
+  for (const v of VARIANTS) {
+    const f = S.files.get(v);
+    if (!f) continue;
+    const text = await f.text();
+    S.variants[v] = parseIni(text);
+    S.headers[v] = iniHeader(text);
+  }
+  if (!Object.keys(S.variants).length) {
+    alert('There is no theme.ini in the folder: starting from a new theme.');
+    newTheme(true);
+  }
+  S.cur = S.variants['theme.ini'] ? 'theme.ini' : Object.keys(S.variants)[0];
+  S.sel = -1; S.undo = []; S.dirty = false;
+  for (const k of S.files.keys()) if (/\.(ttf|otf)$/i.test(k)) loadFont(k);
+  refreshAll();
+}
+
+async function openFolder() {
+  if (window.showDirectoryPicker) {
+    try {
+      const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+      const entries = [];
+      async function walk(h, prefix) {
+        for await (const [n, c] of h.entries()) {
+          if (c.kind === 'file') entries.push([prefix + n, await c.getFile()]);
+          else if (!n.startsWith('.')) await walk(c, prefix + n + '/');
+        }
+      }
+      await walk(dir, '');
+      S.dir = dir;
+      await loadFiles(entries, dir.name);
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      console.warn(e);
+    }
+  }
+  document.getElementById('fDir').click();
+}
+
+document.getElementById('fDir').addEventListener('change', async ev => {
+  const files = [...ev.target.files];
+  if (!files.length) return;
+  const root = files[0].webkitRelativePath.split('/')[0];
+  S.dir = null;
+  await loadFiles(files.map(f => [f.webkitRelativePath.split('/').slice(1).join('/'), f]), root);
+  ev.target.value = '';
+});
+
+function newTheme(keepFiles) {
+  if (!keepFiles) { S.files = new Map(); S.urls = new Map(); S.fonts = new Map(); S.dir = null; S.folderName = ''; }
+  const t = parseIni(`[theme]
+name=New theme
+base=1280x720
+background_color=#101820
+size=24
+color=#F0F0F0
+
+[background]
+type=rect
+rect=0,0,1280,720
+color=#1A2740
+gradient=#080C14
+
+[title]
+type=text
+rect=40,16,800,56
+text=\${title}
+size=40
+color=#FFC040
+
+[list]
+type=list
+rect=40,96,600,560
+size=24
+row_height=37
+padding=12
+sel_background=#2F5FB3
+sel_color=#FFFFFF
+dir_color=#FFD878
+tag_dir=>
+tag_up=<
+sel_scroll=1
+
+[image]
+type=image
+rect=680,96,560,320
+src=\${media.snap}|\${media.title}
+fit=contain
+transition=fade 250
+
+[name]
+type=text
+rect=680,432,560,40
+text=\${game.title}
+size=28
+color=#FFC040
+
+[description]
+type=text
+rect=680,480,560,176
+text=\${game.desc}
+size=18
+wrap=1
+valign=top
+scroll=vertical
+`);
+  S.variants = { 'theme.ini': t };
+  S.headers = {};
+  S.cur = 'theme.ini'; S.sel = -1; S.undo = []; S.dirty = true;
+  refreshAll();
+}
+
+// theme_43.ini / detail_43.ini: base 960x720, x and widths scaled (the texts keep their size)
+function make43() {
+  const src = S.variants[S.cur], dst = S.cur.replace('.ini', '_43.ini');
+  if (!src || S.cur.endsWith('_43.ini') || S.variants[dst]) return;
+  snapshot();
+  const t = JSON.parse(JSON.stringify(src));
+  const [bw, bh] = parseBase(src.global.base);
+  const nw = Math.round(bh * 4 / 3), k = nw / bw;
+  t.global.base = `${nw}x${bh}`;
+  for (const el of t.elements) {
+    const r = parseRect(el.props.rect);
+    el.props.rect = [Math.round(r[0] * k), r[1], Math.round(r[2] * k), r[3]].join(',');
+  }
+  S.variants[dst] = t;
+  S.headers[dst] = 'Variant for 4:3 screens (CRT, 640x240...): used when the screen is narrower than about 3:2.';
+  S.cur = dst;
+  refreshAll();
+}
+
+// detail.ini / detail_43.ini: a copy of theme.ini / theme_43.ini to change into the detail screen
+function makeDetail() {
+  const dst = S.cur.replace('theme', 'detail');
+  if (!S.cur.startsWith('theme') || S.variants[dst]) return;
+  snapshot();
+  S.variants[dst] = JSON.parse(JSON.stringify(theme()));
+  S.headers[dst] = 'Detail screen (X on the gamepad). Variables: see the detail.ini of the simple theme.';
+  S.cur = dst; S.sel = -1;
+  refreshAll();
+  flash(dst + ' made from a copy of ' + S.cur.replace('detail', 'theme') + ': change the list into the versions, add the description');
+}
+
+// screensaver.ini / screensaver_43.ini: a copy of detail.ini / detail_43.ini without the versions
+function makeSaver() {
+  const dst = S.cur.replace('detail', 'screensaver');
+  if (!S.cur.startsWith('detail') || S.variants[dst]) return;
+  snapshot();
+  const t = JSON.parse(JSON.stringify(theme()));
+  t.elements = t.elements.filter(e => !/^versions(_title|_pos|_back)?$/.test(e.name));
+  S.variants[dst] = t;
+  S.headers[dst] = 'Screensaver: random games after some time without keys, Start plays the game shown. Variables: those of detail.ini and ${system.name}.';
+  S.cur = dst; S.sel = -1;
+  refreshAll();
+  flash(dst + ' made from a copy of ' + S.cur.replace('screensaver', 'detail') + ' without the versions: make the description bigger, help "Start: play"');
+}
+
+function headerFor(v) {
+  return S.headers[v] || (v.endsWith('_43.ini') ? '4:3 variant of the theme.' : v.startsWith('detail') ? 'Detail screen of the theme.' : v.startsWith('screensaver') ? 'Screensaver of the theme.' : v.startsWith('loading') ? 'Loading screen of the theme (while a core loads the game).' : 'Theme for Frontier, the MiSTer frontend (made with the theme editor).');
+}
+
+async function saveFolder() {
+  if (!S.dir) return;
+  try {
+    for (const [v, t] of Object.entries(S.variants)) {
+      const fh = await S.dir.getFileHandle(v, { create: true });
+      const w = await fh.createWritable();
+      await w.write(serializeIni(t, headerFor(v)));
+      await w.close();
+    }
+    S.dirty = false;
+    updateStatus();
+    flash('Saved to ' + S.folderName);
+  } catch (e) {
+    alert('Saving failed: ' + e.message);
+  }
+}
+
+function download() {
+  const t = theme();
+  if (!t) return;
+  const blob = new Blob([serializeIni(t, headerFor(S.cur))], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = S.cur;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ======================================================================
+   Import of .ini files
+   ====================================================================== */
+
+async function importIni(files) {
+  if (!files.length) return;
+  const named = files.filter(f => VARIANTS.includes(f.name.toLowerCase()));
+  const other = files.filter(f => !VARIANTS.includes(f.name.toLowerCase()));
+  if (other.length > 1 || (other.length && !theme())) { alert('Only one file with another name at a time: it goes into the current variant (' + S.cur + ').'); return; }
+  const into = [];
+  for (const f of named) into.push(f.name.toLowerCase());
+  if (other.length) into.push(S.cur);
+  if (into.some(v => S.variants[v]) && !confirm('Replace ' + into.filter(v => S.variants[v]).join(', ') + ' with the imported file?')) return;
+  if (theme()) snapshot();
+  for (const f of files) {
+    const v = VARIANTS.includes(f.name.toLowerCase()) ? f.name.toLowerCase() : S.cur;
+    const text = await f.text();
+    S.variants[v] = parseIni(text);
+    S.headers[v] = iniHeader(text);
+  }
+  S.cur = into[0]; S.sel = -1; S.dirty = true;
+  refreshAll();
+  flash(`${files.map(f => f.name).join(', ')} imported` + (S.files.size ? '' : ': open the theme folder for its pictures and fonts'));
+}
+
+async function addImages(files) {
+  for (const f of files) {
+    const path = 'img/' + f.name;
+    S.files.set(path, f);
+    S.urls.delete(path);
+    if (S.dir) {
+      try {
+        const img = await S.dir.getDirectoryHandle('img', { create: true });
+        const fh = await img.getFileHandle(f.name, { create: true });
+        const w = await fh.createWritable(); await w.write(f); await w.close();
+      } catch (e) { alert('Copy failed: ' + e.message); }
+    }
+  }
+  refreshDatalists();
+  flash(S.dir ? `${files.length} pictures copied to img/` : `${files.length} pictures loaded: copy them yourself to img/ in the theme folder`);
+}
+
+function flash(msg) {
+  const st = document.getElementById('status');
+  const old = st.textContent;
+  st.textContent = msg;
+  setTimeout(() => updateStatus(), 2500);
+}
+
+/* ======================================================================
+   Start
+   ====================================================================== */
+
+document.getElementById('sample').value = DEFAULT_SAMPLE;
+document.getElementById('sample').addEventListener('input', () => { render(); refreshList(); });
+document.getElementById('bOpen').onclick = openFolder;
+document.getElementById('bNew').onclick = () => { if (!S.dirty || confirm('Discard the changes?')) newTheme(false); };
+document.getElementById('bMake43').onclick = make43;
+document.getElementById('bMakeDetail').onclick = makeDetail;
+document.getElementById('bMakeSaver').onclick = makeSaver;
+document.getElementById('bImport').onclick = () => document.getElementById('fIni').click();
+document.getElementById('fIni').addEventListener('change', ev => { importIni([...ev.target.files]); ev.target.value = ''; });
+document.getElementById('bSave').onclick = saveFolder;
+document.getElementById('bDownload').onclick = download;
+document.getElementById('bUndo').onclick = undo;
+document.getElementById('bHelp').onclick = () => document.getElementById('help').showModal();
+document.getElementById('bAdd').onclick = addElement;
+document.getElementById('bUp').onclick = () => move(1);
+document.getElementById('bDown').onclick = () => move(-1);
+document.getElementById('bDup').onclick = duplicate;
+document.getElementById('bDel').onclick = remove;
+document.getElementById('bAddImg').onclick = () => document.getElementById('fImg').click();
+document.getElementById('fImg').addEventListener('change', ev => { addImages([...ev.target.files]); ev.target.value = ''; });
+document.getElementById('variant').onchange = ev => { S.cur = ev.target.value; S.sel = -1; refreshAll(); };
+for (const id of ['zoom', 'grid', 'crt']) document.getElementById(id).addEventListener('change', render);
+document.getElementById('textlayout').addEventListener('change', ev => { textLayout = ev.target.checked; render(); refreshList(); });
+window.addEventListener('resize', render);
+window.addEventListener('beforeunload', ev => { if (S.dirty) { ev.preventDefault(); ev.returnValue = ''; } });
+
+// drag a folder onto the page
+const stage = document.getElementById('stage'), drop = document.getElementById('drop');
+stage.addEventListener('dragover', ev => { ev.preventDefault(); drop.style.display = 'flex'; });
+stage.addEventListener('dragleave', () => { drop.style.display = 'none'; });
+stage.addEventListener('drop', async ev => {
+  ev.preventDefault();
+  drop.style.display = 'none';
+  const item = [...ev.dataTransfer.items].find(i => i.kind === 'file');
+  if (!item) return;
+  if (item.getAsFileSystemHandle) {
+    const h = await item.getAsFileSystemHandle();
+    if (h && h.kind === 'directory') {
+      const entries = [];
+      async function walk(d, prefix) {
+        for await (const [n, c] of d.entries()) {
+          if (c.kind === 'file') entries.push([prefix + n, await c.getFile()]);
+          else if (!n.startsWith('.')) await walk(c, prefix + n + '/');
+        }
+      }
+      await walk(h, '');
+      try { if (await h.requestPermission({ mode: 'readwrite' }) === 'granted') S.dir = h; } catch (e) { S.dir = null; }
+      await loadFiles(entries, h.name);
+      return;
+    }
+  }
+  const entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+  if (entry && entry.isDirectory) {
+    const entries = [];
+    const readAll = d => new Promise(res => { const r = d.createReader(), all = []; const next = () => r.readEntries(es => { if (!es.length) res(all); else { all.push(...es); next(); } }); next(); });
+    async function walk(d, prefix) {
+      for (const e of await readAll(d)) {
+        if (e.isFile) entries.push([prefix + e.name, await new Promise(res => e.file(res))]);
+        else if (!e.name.startsWith('.')) await walk(e, prefix + e.name + '/');
+      }
+    }
+    await walk(entry, '');
+    S.dir = null;
+    await loadFiles(entries, entry.name);
+  }
+});
+
+newTheme(false);
+S.dirty = false;
+updateStatus();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+FRONTIER PER MISTER - INSTALLAZIONE
+==================================
+
+Pacchetto del @BUILD_DATE@.
+
+1. Copia il CONTENUTO della cartella SD dello zip nella radice della SD del
+   MiSTer. Se stai aggiornando Frontier, sostituisci i file quando richiesto.
+
+2. Sul MiSTer apri F12 -> Scripts -> frontier_install.
+   L'installazione salva il MiSTer originale, conserva le tue impostazioni e
+   protegge Frontier dagli aggiornamenti. Il MiSTer si riavvia.
+3. Se hai un CRT collegato alla VGA della I/O board, lancia anche
+   F12 -> Scripts -> frontier_crt: Frontier anche sul CRT (HD sulla HDMI e
+   240p sul CRT insieme). Rilanciato lo spegne; c'e' anche in Frontier
+   Settings -> CRT output. Il vecchio script frontier_crt_menu non serve piu'.
+
+Senza questo pacchetto, con update_all: copia downloader_frontiermr.ini
+(https://github.com/ElFDA/FrontierMr/releases/latest/download/downloader_frontiermr.ini)
+nella radice della SD, lancia update_all, poi i passi 2 e 3.
+
+Dopo l'installazione puoi usare update_all come al solito: non devi lanciare
+comandi, modificare file ini o reinstallare Frontier dopo ogni aggiornamento.
+Gli altri core e il menu ufficiale continuano ad aggiornarsi. Se un
+aggiornamento rimette il MiSTer ufficiale, al riavvio torna quello di
+Frontier (lo fa frontier/guard.sh). update_all scarica anche le versioni
+nuove di Frontier.
+
+SE HAI GIA' FRONTIER
+  Copia la cartella SD del nuovo pacchetto e rilancia frontier_install.
+  Nella radice torna il menu.rbf ufficiale (al piu' tardi col prossimo
+  update_all): quello di Frontier ora sta in frontier/bin. Preferiti,
+  liste, media scaricati e frontier.ini vengono conservati.
+
+DISATTIVARE O RIATTIVARE L'INTERFACCIA
+  F12 -> Scripts -> frontier_on_off. Il MiSTer resta quello di Frontier.
+
+TORNARE AL FIRMWARE UFFICIALE
+  F12 -> Scripts -> frontier_uninstall.
+  Ferma la protezione, toglie Frontier dagli aggiornamenti e rimette il
+  MiSTer originale (MiSTer.orig); se manca, il MiSTer ufficiale arriva col
+  prossimo update_all. Media e impostazioni di Frontier restano sulla SD nel
+  caso tu voglia reinstallarlo.
+
+SE L'INSTALLAZIONE SI FERMA
+  Non avviare altri script contemporaneamente all'installazione. Se la
+  protezione non puo' essere configurata, l'installazione si ferma prima di
+  sostituire il binario MiSTer. Invia il messaggio di errore a chi ti ha dato
+  il pacchetto; il dettaglio e' in frontier/update_protection.log.
+
+GUIDA COMPLETA
+  Dopo l'installazione trovi frontier/LEGGIMI_ita.txt sulla SD (sezione
+  AGGIORNAMENTI). Include impostazioni video, temi, giochi, scraper,
+  preferiti e liste.
+
+Questa e' una delle prime versioni: segnala i problemi su
+https://github.com/ElFDA/FrontierMr/issues

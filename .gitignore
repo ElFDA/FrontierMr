@@ -29,3 +29,12 @@ host
 .vs
 MiSTer
 /bin
+
+# Frontier: built by tools/fe/fe_av/build.sh
+tools/fe/sd/frontier/lib/fe_av.so
+tools/fe/fe_av/fev_test
+
+# Frontier: local settings and secrets
+tools/fe/env.local.sh
+tools/fe/ss_dev.secret
+tools/fe/sd/frontier/scraper/ss_dev.key

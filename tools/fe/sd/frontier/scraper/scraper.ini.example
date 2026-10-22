@@ -1,0 +1,14 @@
+; ScreenScraper credentials for fe_scrape.py.
+; Copy to /media/fat/frontier/scraper.ini (or next to this file, scraper/scraper.ini) and fill in.
+; user/password: your screenscraper.fr account
+; devid/devpassword: optional, "developer" credentials of your own (asked on the
+;   screenscraper.fr forum); empty = the ones of Frontier, built into the scraper
+[screenscraper]
+user =
+password =
+devid =
+devpassword =
+
+[scraper]
+; preferred regions for the box art (jp = Japanese), then the one of the ROM
+; box_regions = jp

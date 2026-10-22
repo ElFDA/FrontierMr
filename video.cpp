@@ -84,6 +84,14 @@ static int brd_y = 0;
 
 static int menu_bg = 0;
 static int menu_bgn = 0;
+static int fe_page = 0; // FRONTIER
+static int fe_crt = 0; // FRONTIER
+static int fe_il = 1; // FRONTIER: CRT pages interlaced (crt_interlace in frontier.ini)
+static int fe_hpos = 0; // FRONTIER: horizontal position on the CRT, steps of 4 pixels (crt_hpos)
+static int fe_crt_on(); // FRONTIER
+static int fe_dual_on(); // FRONTIER
+static void fe_dual_status(); // FRONTIER
+static int menu_bg_gen = 0; // FRONTIER
 
 VideoInfo current_video_info;
 
@@ -3587,7 +3595,7 @@ void video_fb_enable(int enable, int n)
 		int res = spi_uio_cmd_cont(UIO_SET_FBUF);
 		if (res)
 		{
-			if (is_menu() && !enable && menu_bg)
+			if (is_menu() && !enable && (menu_bg || fe_page)) // FRONTIER
 			{
 				enable = 1;
 				n = menu_bgn;
@@ -3605,6 +3613,27 @@ void video_fb_enable(int enable, int n)
 					yoff = v_cur.item[8] - FB_DV_UBRD;
 				}
 
+				int xw = v_cur.item[1], yh = v_cur.item[5]; // FRONTIER: CRT pages on HDMI
+				if (n && fe_crt_on())
+				{
+					// biggest 4:3 window with integer scaling (horizontal in
+					// scaler pixels: with pixel repetition they are 2 wide)
+					int pr = v_cur.param.pr ? 2 : 1;
+					for (int k = v_cur.item[5] / fb_height; k >= 1; k--)
+					{
+						int h = fb_height * k;
+						int w = h * 4 / 3 / pr;
+						if (w <= (int)v_cur.item[1] && !(w % fb_width) && !((h * 4 / 3) % pr))
+						{
+							xoff += (v_cur.item[1] - w) / 2;
+							yoff += (v_cur.item[5] - h) / 2;
+							xw = w;
+							yh = h;
+							break;
+						}
+					}
+				}
+
 				//printf("Switch to Linux frame buffer\n");
 				spi_w((uint16_t)(FB_EN | FB_FMT_RxB | FB_FMT_8888)); // format, enable flag
 				spi_w((uint16_t)fb_addr); // base address low word
@@ -3612,9 +3641,9 @@ void video_fb_enable(int enable, int n)
 				spi_w(n ? fb_width : con_width);   // frame width
 				spi_w(n ? fb_height : con_height); // frame height
 				spi_w(xoff);                 // scaled left
-				spi_w(xoff + v_cur.item[1] - 1); // scaled right
+				spi_w(xoff + xw - 1); // scaled right // FRONTIER
 				spi_w(yoff);                 // scaled top
-				spi_w(yoff + v_cur.item[5] - 1); // scaled bottom
+				spi_w(yoff + yh - 1); // scaled bottom // FRONTIER
 				spi_w((n ? fb_width : con_width) * 4); // stride
 
 				//printf("Linux frame buffer: %dx%d, stride = %d bytes\n", fb_width, fb_height, fb_width * 4);
@@ -3645,7 +3674,8 @@ void video_fb_enable(int enable, int n)
 
 		DisableIO();
 		if (cfg.direct_video) set_vga_fb(enable);
-		if (is_menu()) user_io_status_set("[8:5]", (fb_enabled && !fb_num) ? 0xB : 0);
+		if (is_menu()) user_io_status_set("[8:5]", (fb_enabled && (!fb_num || fe_crt_on() || fe_dual_on())) ? 0xB : 0); // FRONTIER
+		if (is_menu()) fe_dual_status(); // FRONTIER
 	}
 }
 
@@ -3689,6 +3719,12 @@ static void video_fb_config()
 	{
 		con_width = 640;
 		con_height = (cfg.menu_pal ? 288 : 240) * (cfg.forced_scandoubler ? 2 : 1);
+	}
+
+	if (fe_crt_on()) // FRONTIER: menu pages sized for the CRT (console_out of menu.rbf)
+	{
+		fb_width = 640;
+		fb_height = (cfg.menu_pal ? 288 : 240) * (cfg.forced_scandoubler ? 2 : 1);
 	}
 
 	brd_x = cfg.vscale_border / fb_scale_x;
@@ -4004,6 +4040,7 @@ void video_menu_bg(int n, int idle)
 
 	static int cached_idle = 0;
 	bg_has_picture = 0;
+	menu_bg_gen++; // FRONTIER
 
 	if (n < 0)
 	{
@@ -4609,3 +4646,143 @@ int video_get_rotated()
   return current_video_info.rotated;
 }
 
+// FRONTIER: access to the menu framebuffer pages (1 and 2)
+volatile uint32_t *video_fe_page(int page, int *w, int *h)
+{
+	if (w) *w = fb_base ? fb_width : 0;
+	if (h) *h = fb_base ? fb_height : 0;
+	if (!fb_base || page < 1 || page > 2) return 0;
+	return fb_base + (FB_SIZE * page);
+}
+
+int video_fe_cur_page()
+{
+	return menu_bgn;
+}
+
+void video_fe_show(int page)
+{
+	fe_page = page;
+	menu_bgn = page;
+	video_fb_enable(0);
+}
+
+int video_fe_bg_gen()
+{
+	return menu_bg_gen;
+}
+
+// FRONTIER: menu pages at 640x240 (288 PAL) shown also on the VGA output of
+// the I/O board by menu.rbf (as fb_terminal=2 does for the console), HDMI
+// shows them scaled in a 4:3 window
+static int fe_crt_on()
+{
+	return fe_crt && is_menu() && !cfg.vga_scaler && !video_is_direct() && !fe_dual_on();
+}
+
+// FRONTIER: with Frontier's menu.rbf ("fe" at the end of its version) the
+// VGA output reads its own pages (status[9], page in status[10], base address
+// in status[31:16]): HD pages on HDMI and 640x240 (288 PAL) pages on the CRT
+#define FE_CRT_ADDR 0x23800000          // after the 3 menu pages, below the 64MB cleared by menu.rbf
+#define FE_CRT_PAGE (2 * 1024 * 1024)
+static volatile uint32_t *fe_crt_base = 0;
+static int fe_crt_cur = 0;
+static uint32_t fe_crt_sent = 0;        // status bits [31:9] last sent, bit 0 = valid
+
+// FRONTIER: the menu.rbf of Frontier ends with "fe"; "fi" = also interlaced
+// (status[11]: 480i with 240 lines per field, the CRT pages are 640x480)
+static int fe_core_ends(const char *end)
+{
+	const char *name = OsdCoreNameGet();
+	size_t len = strlen(name), n = strlen(end);
+	return len >= n && !strcmp(name + len - n, end);
+}
+
+static int fe_dual_on()
+{
+	if (!fe_crt || !is_menu() || cfg.vga_scaler || video_is_direct()) return 0;
+	return fe_core_ends("fe") || fe_core_ends("fi");
+}
+
+static int fe_il_on()
+{
+	return fe_il && !cfg.forced_scandoubler && fe_dual_on() && fe_core_ends("fi");
+}
+
+static void fe_dual_status()
+{
+	int on = fb_enabled && fb_num && fe_dual_on() && fe_crt_base;
+	int il = on && fe_il_on();
+	// crt_hpos: the menu.rbf of Frontier moves its sync, for the CRT pages and also
+	// with direct_video (the CRT shows the menu's own 640x240 framebuffer)
+	int ours = is_menu() && (fe_core_ends("fe") || fe_core_ends("fi"));
+	uint32_t hp = (ours && (on || video_is_direct())) ? (fe_hpos & 0xF) : 0;
+	uint32_t bits = on ? (1 | (1 << 9) | ((uint32_t)il << 11) | (fe_crt_cur << 10) | (hp << 12) | (FE_CRT_ADDR & 0xFFFF0000)) : (1 | (hp << 12));
+	if (bits == fe_crt_sent) return;
+	if (on && (bits ^ fe_crt_sent) & 0xFFFF0000)
+	{
+		user_io_status_set("[23:16]", (FE_CRT_ADDR >> 16) & 0xFF);
+		user_io_status_set("[31:24]", FE_CRT_ADDR >> 24);
+	}
+	user_io_status_set("[10]", fe_crt_cur);
+	user_io_status_set("[11]", il);
+	user_io_status_set("[15:12]", hp);
+	user_io_status_set("[9]", on);
+	fe_crt_sent = bits;
+}
+
+volatile uint32_t *video_fe_crt_page(int page, int *w, int *h)
+{
+	int on = fe_dual_on();
+	if (on && !fe_crt_base) fe_crt_base = (volatile uint32_t *)shmem_map(FE_CRT_ADDR, FE_CRT_PAGE * 2);
+	if (!on || !fe_crt_base || page < 0 || page > 1)
+	{
+		if (w) *w = 0;
+		if (h) *h = 0;
+		return 0;
+	}
+	if (w) *w = 640;
+	if (h)
+	{
+		int lines = cfg.menu_pal ? 288 : 240;
+		*h = fe_il_on() ? 2 * lines : lines * (cfg.forced_scandoubler ? 2 : 1);
+	}
+	return fe_crt_base + (FE_CRT_PAGE / 4) * page;
+}
+
+int video_fe_crt_cur_page()
+{
+	return fe_crt_cur;
+}
+
+void video_fe_crt_show(int page)
+{
+	fe_crt_cur = page ? 1 : 0;
+	if (is_menu()) fe_dual_status();
+}
+
+void video_fe_crt(int on)
+{
+	if (fe_crt == on) return;
+	fe_crt = on;
+	if (fb_base) video_fb_config();
+}
+
+void video_fe_interlace(int on)
+{
+	fe_il = on;
+	if (is_menu()) fe_dual_status();
+}
+
+int video_fe_hpos(int px)
+{
+	int n = (px >= 0 ? px + 2 : px - 2) / 4;
+	fe_hpos = n < -8 ? -8 : n > 7 ? 7 : n;
+	if (is_menu()) fe_dual_status();
+	return (is_menu() && (fe_core_ends("fe") || fe_core_ends("fi"))) ? fe_hpos * 4 : 0;
+}
+
+int video_fe_main_crt()
+{
+	return is_menu() && (video_is_direct() || fe_crt_on());
+}
