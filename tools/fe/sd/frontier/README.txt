@@ -4,7 +4,8 @@ FRONTIER for MiSTer - quick guide
 Frontier replaces the core selection screen of the menu. Everything else
 in MiSTer works as before.
 Step by step guides (scraper and ScreenScraper account, lists, which version
-of a game starts): https://github.com/ElFDA/FrontierMr/tree/master/docs
+of a game starts, Coin-Op mode, a game with a black screen):
+https://github.com/ElFDA/FrontierMr/tree/master/docs
 Earlier versions were called "frontend": at the first start the folder
 /media/fat/frontend becomes /media/fat/frontier (frontend.ini becomes
 frontier.ini, frontend.off frontier.off), with themes, favorites, media and

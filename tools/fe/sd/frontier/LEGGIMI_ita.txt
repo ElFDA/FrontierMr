@@ -8,7 +8,8 @@ avvisi sono scritti come compaiono sullo schermo.
 Frontier sostituisce la schermata di scelta dei core del menu. Tutto il
 resto del MiSTer funziona come prima.
 Guide passo passo (scraper e account ScreenScraper, liste, quale versione di
-un gioco parte), in italiano i file *_ita.md:
+un gioco parte, modalita' Coin-Op, un gioco con lo schermo nero), in italiano
+i file *_ita.md:
 https://github.com/ElFDA/FrontierMr/tree/master/docs
 Le versioni precedenti si chiamavano "frontend": al primo avvio la cartella
 /media/fat/frontend diventa /media/fat/frontier (frontend.ini diventa

@@ -146,6 +146,10 @@ Settings -> CRT Geometry.
     filter on the data of the games ([italiano](docs/LISTS_ita.md)).
   * [Which version of a game starts](docs/VERSIONS.md): the default region and
     version, `regions=`, the other versions ([italiano](docs/VERSIONS_ita.md)).
+  * [Coin-Op mode](docs/COINOP.md): the last game at power on, the countdown,
+    its protections ([italiano](docs/COINOP_ita.md)).
+  * [A game shows a black screen](docs/BLACK_SCREEN.md): how to get the MiSTer
+    back, the usual causes ([italiano](docs/BLACK_SCREEN_ita.md)).
 * Theme guide: [THEME_GUIDE.txt](tools/fe/sd/frontier/THEME_GUIDE.txt)
   (Italian: [GUIDA_TEMA_ita.txt](tools/fe/sd/frontier/GUIDA_TEMA_ita.txt)).
 * How Frontier stays installed through updates and how to go back to the
@@ -161,7 +165,7 @@ Settings -> CRT Geometry.
 | `tools/fe/sd/frontier/` | what goes to `/media/fat/frontier/` on the SD card: themes, `systems.ini`, scraper, update protection, guides |
 | `tools/fe/sd/Scripts/` | the scripts of the Scripts menu |
 | `tools/fe/` | package and update database (`package.py`, `make_db.py`), tests, helper scripts (deploy, screenshots of the framebuffer, theme preview and editor), `fe_av/` (the video library), `menu_frontier.patch` |
-| `docs/` | step by step guides (scraper, lists, versions), architecture and update protection |
+| `docs/` | step by step guides (scraper, lists, versions, Coin-Op, black screen), architecture and update protection |
 
 ### Build
 
