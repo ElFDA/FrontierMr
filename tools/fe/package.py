@@ -12,8 +12,9 @@ A GitHub release of FrontierMr (tag on the commit of "publish" made from the
 same frontier commit, see publish.py):
   package.py --release v2026.10.22 --owner USER
 uses the public files only and writes in the output folder db.json.zip (for
-the "db" branch) and assets/ for the release: the ZIP and
-downloader_frontiermr.ini (to start an installation through update_all).
+the "db" branch) and assets/ for the release: the ZIP, downloader_frontiermr.ini
+(to start an installation through update_all) and theme_editor.html (for the
+PC, standalone: it is not in the ZIP).
 """
 import argparse
 from datetime import datetime, timezone
@@ -110,6 +111,8 @@ def main():
         assets.mkdir()
         shutil.copy2(archive, assets / archive.name)
         shutil.copy2(setup / 'frontier/downloader_frontiermr.ini', assets / 'downloader_frontiermr.ini')
+        # the theme editor runs on the PC: a file of its own, not in the ZIP for the SD
+        shutil.copy2(Path(temp.name) / 'tools/fe/theme_editor.html', assets / 'theme_editor.html')
         print('Release assets:', assets, sorted(p.name for p in assets.iterdir()))
     temp.cleanup()
     print('Package:', archive)

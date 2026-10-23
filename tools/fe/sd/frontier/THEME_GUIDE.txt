@@ -27,8 +27,9 @@ panels on multiples of 3.
 STEP 0 - WHAT YOU NEED
   - a PC with Chrome or Edge (they can save straight into the folder;
     with other browsers use "Download .ini" and copy the files yourself)
-  - the repository of Frontier: the editor is tools/fe/theme_editor.html
-    (open it with a double click, it works offline)
+  - the editor: the file theme_editor.html from the Releases page of FrontierMr
+    (https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html),
+    open it with a double click, it works offline
   - the pictures and fonts of City Pop: from tools/fe/sd/frontier/themes/
     or from /media/fat/frontier/themes/ on the MiSTer
 

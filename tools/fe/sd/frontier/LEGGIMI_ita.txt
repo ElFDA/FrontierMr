@@ -685,8 +685,10 @@ LAYOUT TESTUALE
   sono sempre.
 
 CREARE UN TEMA
-  Aprire tools/fe/theme_editor.html (nel repository) con Chrome o Edge,
-  "Open folder" su una copia di themes/simple, modificare, "Save to folder",
+  L'editor e' per il PC, non per il MiSTer: e' un solo file, theme_editor.html,
+  che funziona anche senza internet. Si scarica dalla pagina Releases di
+  FrontierMr (https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html)
+  e si apre con Chrome o Edge, "Open folder" su una copia di themes/simple, modificare, "Save to folder",
   copiare la cartella in /media/fat/frontier/themes/, mettere
   theme=<nome> in frontier.ini e premere F5.
   L'editor modifica theme.ini, theme_43.ini, detail.ini, detail_43.ini,

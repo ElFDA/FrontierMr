@@ -114,7 +114,7 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
     <li><b>Import .ini</b> loads .ini files of a theme into the editor (e.g. those of another theme, into the open folder whose pictures and fonts are used): <code>theme.ini</code>, <code>theme_43.ini</code>, <code>detail.ini</code>, <code>detail_43.ini</code>, <code>screensaver.ini</code>, <code>screensaver_43.ini</code> by their name, any other name into the current variant.</li>
     <li>Drag an element to move it, the handles to resize it; arrows = 1 px, Shift+arrows = 10 px; Shift while dragging = no grid.</li>
     <li>Coordinates in "base" units (e.g. 1280×720), scaled to the real screen. <code>size</code> of the texts = font height in base px, as in CSS.</li>
-    <li>The preview is approximate: to see it for real copy the theme to the MiSTer (<code>tools/fe/theme_push.sh</code>) and press F5 in Frontier, or use <code>tools/fe/preview/preview.sh</code> on a PC.</li>
+    <li>The preview is approximate: to see it for real copy the theme folder to <code>/media/fat/frontier/themes/</code> on the MiSTer, set <code>theme=&lt;name&gt;</code> in <code>frontier.ini</code> (or choose it in Frontier Settings) and press F5 in Frontier.</li>
     <li>Animations (fades, scrolling, frames, video) are not animated here.</li>
   </ul>
   <p><button onclick="this.closest('dialog').close()">Close</button></p>
@@ -277,6 +277,12 @@ game.players=2
 game.rating=0.80
 game.stars=★★★★☆
 game.favorite=1
+game.cpu=Zilog Z80 @ 4 MHz
+game.memory=64 KB RAM
+game.graphics=256 x 224, 256 colours
+game.sound=YM2203 + AY-3-8910
+game.media=Cartridge
+game.units=1 million
 message=
 jump=
 version=1942 (Revision B)

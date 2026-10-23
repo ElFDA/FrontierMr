@@ -29,8 +29,9 @@ multipli di 3.
 PASSO 0 - COSA SERVE
   - un PC con Chrome o Edge (salvano direttamente nella cartella; con altri
     browser si usa "Download .ini" e si copiano i file a mano)
-  - il repository di Frontier: l'editor e' tools/fe/theme_editor.html
-    (si apre con un doppio clic, funziona senza internet)
+  - l'editor: il file theme_editor.html dalla pagina Releases di FrontierMr
+    (https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html),
+    si apre con un doppio clic, funziona senza internet
   - le immagini e i font di City Pop: da tools/fe/sd/frontier/themes/
     oppure da /media/fat/frontier/themes/ sul MiSTer
 

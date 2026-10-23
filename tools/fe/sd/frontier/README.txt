@@ -652,8 +652,10 @@ TEXT LAYOUT
   without layout are always there.
 
 MAKING A THEME
-  Open tools/fe/theme_editor.html (in the repository) with Chrome or Edge,
-  "Open folder" on a copy of themes/simple, edit, "Save to folder", copy
+  The editor is for the PC, not for the MiSTer: it is one file, theme_editor.html,
+  which works offline. Download it from the Releases page of FrontierMr
+  (https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html)
+  and open it with Chrome or Edge, "Open folder" on a copy of themes/simple, edit, "Save to folder", copy
   the folder to /media/fat/frontier/themes/, set theme=<name> in
   frontier.ini and press F5.
   The editor edits theme.ini, theme_43.ini, detail.ini, detail_43.ini,
