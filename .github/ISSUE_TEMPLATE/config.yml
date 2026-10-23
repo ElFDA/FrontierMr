@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Guides
+    url: https://github.com/ElFDA/FrontierMr#guides
+    about: Installation, scraper, lists, versions, Coin-Op, black screen, theme editor.

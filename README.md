@@ -173,6 +173,9 @@ Settings -> CRT Geometry.
 * How Frontier stays installed through updates and how to go back to the
   official firmware: [docs/UPDATE_PROTECTION.md](docs/UPDATE_PROTECTION.md).
 * How Frontier hooks into Main_MiSTer: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+* Something does not work: open an [issue](https://github.com/ElFDA/FrontierMr/issues/new/choose)
+  (English or Italian); the form asks for the version, the video output and the
+  messages that help.
 
 ## For developers
 

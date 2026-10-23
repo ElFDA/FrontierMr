@@ -1,0 +1,63 @@
+name: Problem report
+description: Something in Frontier does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [guides](https://github.com/ElFDA/FrontierMr#guides) first:
+        many questions (scraper, lists, which version of a game starts, black screen, Coin-Op) are answered there.
+        You can write in English or Italian.
+  - type: input
+    id: version
+    attributes:
+      label: Frontier version
+      description: The release you installed (e.g. v2026.10.23c), or the date of your last update_all.
+      placeholder: v2026.10.23c
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Frontier?
+      options:
+        - update_all (downloader_frontiermr.ini) + frontier_install
+        - ZIP from the Releases page + frontier_install
+        - Not installed yet / installation failed
+    validations:
+      required: true
+  - type: dropdown
+    id: video
+    attributes:
+      label: Video output
+      options:
+        - HDMI only
+        - CRT only (VGA of the I/O board)
+        - HDMI + CRT together
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, step by step, what you expected and what you saw instead. Exact messages help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Messages and files
+      description: |
+        Paste what applies (from the SD card, or from F12 -> Scripts output):
+        - for installation or update problems: the message of frontier_install / frontier_uninstall,
+          `frontier/update_protection.log`, `frontier/guard.log`, and the `[MiSTer]` section of `downloader.ini` if you have one;
+        - for a theme or game problem: the theme name, the system and the game.
+        Photos of the screen are welcome (drag them here).
+      render: text
+  - type: textarea
+    id: ini
+    attributes:
+      label: Settings (optional)
+      description: The video lines of MiSTer.ini (video_mode, direct_video, fb_size, vga_mode...) and frontier/frontier.ini, if they may matter.
+      render: ini
