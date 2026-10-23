@@ -4,6 +4,29 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## Unreleased
+* **Faster scraper**, above all for arcade games: the `.mra` files are read once and kept in a
+  cache, ArcadeDB is asked only for the games to do (in a few batches), the gamelist is written in
+  one go (seconds instead of a minute on the SD card) and not written at all when nothing changed,
+  the index of the lists keeps the systems not scraped.
+* **Games not found are remembered**: a game that no source has (hacks, bootlegs, homebrew) is
+  skipped for 30 days, so the counter shows only the games to do; network errors do not count.
+  Frontier Settings -> Scraper -> Games already scraped -> "retry not found" (`--retry-missing`)
+  tries them at once.
+* **Arcade alternatives** (`_Arcade/_alternatives`) take the data and the pictures of their main game,
+  keeping their own name, without requests or copies; only those without a main game are scraped.
+* The scraper finds the pictures already there whatever the case of the letters, as Frontier does
+  ("Revision 1" and "revision 1" are the same file on the SD card): they are no longer downloaded
+  again at every run.
+* At the end Frontier says what the run brought: "finished: 3 updated" or "finished: nothing new", and
+  the message also counts the games not found.
+* The scraper started from Frontier runs on the core of the processor that Frontier leaves free: before it
+  shared the busy one and was about 9 times slower (an arcade run with nothing to do: 5 minutes, now about one).
+* **Scrape this game**: in the details of a game, under "Add to list...", the scraper for that game only
+  (asked again to the sources, data and pictures downloaded again; `--game` from a terminal).
+* While the scraper gets ready Frontier shows what it is doing ("checking what is missing",
+  "asking ArcadeDB") instead of "0/…".
+
 ## v2026.10.23
 * **Theme editor as a download of its own.** `theme_editor.html` is now a file of every release (on the
   Releases page, next to the ZIP): it is a tool for the PC, so it is not in the ZIP for the SD card.

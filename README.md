@@ -66,7 +66,7 @@ and scraped media through updates.
 | `frontier_crt` | Frontier also on the CRT of the VGA output, on or off |
 
 The scraper (game data, pictures, videos) runs from Frontier: Frontier
-Settings -> Scraper.
+Settings -> Scraper; a single game from its details (X) -> Scrape this game.
 
 In a game: OSD (F12) -> Core opens the list of the cores as usual; Alt+F12,
 or L+R+Select+Start held for 2 seconds on the joypad, goes back to Frontier.

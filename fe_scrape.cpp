@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sched.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -58,6 +59,8 @@ static void read_status(fe_scrape_state &st)
 	st.total = atoi(s["total"].c_str());
 	st.done = atoi(s["done"].c_str());
 	st.systems = atoi(s["systems"].c_str());
+	st.updated = s.count("updated") ? atoi(s["updated"].c_str()) : -1;
+	st.notfound = atoi(s["notfound"].c_str());
 	st.running = st.state == "running" && alive(atoi(s["pid"].c_str()));
 	// running in the file but the process is gone: power off, killed
 	if (st.state == "running" && !st.running) st.state = "stopped";
@@ -113,6 +116,12 @@ int fe_scrape_start(const std::vector<std::string> &args)
 			sigemptyset(&set);
 			sigprocmask(SIG_SETMASK, &set, 0);
 			for (int s = 1; s < 32; s++) signal(s, SIG_DFL);
+			// on core 0, as the scripts of the menu: Main is pinned to core 1 (main.cpp) and
+			// keeps it busy, so the scraper would get a tenth of it
+			cpu_set_t cpus;
+			CPU_ZERO(&cpus);
+			CPU_SET(0, &cpus);
+			sched_setaffinity(0, sizeof(cpus), &cpus);
 			setpriority(PRIO_PROCESS, 0, 10); // games and Frontier first
 			execvp("python3", argv.data());
 			_exit(127);

@@ -373,11 +373,21 @@ DATI DEI SISTEMI
 SCRAPER DA FRONTIER (Frontier Settings -> Scraper)
   Start scraping      A: avvia lo scraper in sottofondo con le scelte qui
                       sotto (di nuovo A: Stop scraping). A destra l'avanzamento,
-                      per es. "SNES 120/840 (2/5)", poi finished/stopped/error.
+                      per es. "SNES 120/840 (2/5)", poi finished/stopped/error;
+                      "finished: 3 updated" = 3 giochi hanno avuto dati o
+                      immagini nuove, "finished: nothing new" = niente da
+                      aggiungere (il messaggio alla fine dice anche quanti
+                      non sono stati trovati).
                       Si puo' continuare a usare Frontier e giocare: lo scraper
-                      va avanti; le immagini nuove di un sistema compaiono
-                      quando quel sistema e' finito. Uscita dello scraper:
-                      frontier/.cache/scrape.log
+                      va avanti sull'altro core del processore; le immagini
+                      nuove di un sistema compaiono quando quel sistema e'
+                      finito. Uscita dello scraper: frontier/.cache/scrape.log
+  Scrape this game    nei dettagli di un gioco (X), sotto "Add to list...": lo
+                      scraper solo per quel gioco (e per le alternative arcade
+                      che prendono da lui), in sottofondo. Richiede il gioco
+                      alle fonti e riscarica i suoi dati e le sue immagini,
+                      con il contenuto scelto qui (Texts, Box art...). Circa
+                      un minuto; le immagini nuove compaiono quando ha finito.
   Get systems data only
                       A: solo i dati dei sistemi scelti (descrizione,
                       produttore, anno, hardware da Wikipedia, vedi DATI DEI
@@ -395,7 +405,9 @@ SCRAPER DA FRONTIER (Frontier Settings -> Scraper)
                       il fanart)
   Games already scraped
                       skip (solo cio' che manca, di base), texts again (i dati
-                      nella lingua scelta, immagini tenute), all again (tutto)
+                      nella lingua scelta, immagini tenute), all again (tutto),
+                      retry not found (anche i giochi che nessuna fonte aveva
+                      negli ultimi 30 giorni, vedi SCRAPER)
   ScreenScraper user, ScreenScraper password
                       A, poi si scrivono con una tastiera collegata al MiSTer
                       (Invio: salva, Esc: annulla; vuoto = tolto). Salvati in
@@ -412,6 +424,8 @@ SCRAPER (dati e immagini)
     python3 /media/fat/frontier/scraper/fe_scrape.py --all-systems
   Opzioni utili: --limit 20 (prova), --force (rifai), --lang it (descrizioni
   e generi in italiano; di base inglese), --help.
+  --game "Bomb Jack": solo quel gioco (nome del file senza estensione, con
+  --arcade o un solo --system), richiesto e riscaricato di nuovo.
   --media box,snap,video: solo queste immagini/video (box, snap, title,
   marquee, fanart, video; none = niente media); --no-text: niente dati, solo
   media.
@@ -453,6 +467,22 @@ SCRAPER (dati e immagini)
   Sul PC con la SD montata: aggiungere --root <percorso della SD>; con
   Pillow le immagini vengono anche rimpicciolite.
   Interrompere lo scraper (Ctrl+C) e' sicuro: rilanciandolo riprende da dove era.
+  Giochi non trovati: quando nessuna fonte ha un gioco (o non tutto quello
+  chiesto: per esempio nessuna copertina da nessuna parte), lo scraper se lo
+  ricorda in .scrape_cache/notfound_<sistema>.tsv e lo salta per 30 giorni,
+  cosi' il contatore mostra solo i giochi da fare (hack, bootleg e homebrew
+  non vengono richiesti a ogni passata). Dopo 30 giorni, o chiedendo altre
+  immagini o un'altra fonte, li ritenta; subito con --retry-missing (o
+  "Games already scraped" = retry not found), --force o --refresh-data.
+  Gli errori di rete o del server non contano: quei giochi si ritentano.
+  Alternative dell'arcade (_Arcade/_alternatives): un'alternativa prende i
+  dati e le immagini del suo gioco principale (la .mra fuori da
+  _alternatives dello stesso set MAME, per esempio "Street Fighter II (USA
+  910522)" da "Street Fighter II (World 910522)") e tiene il suo nome:
+  nessuna richiesta e nessun file copiato. Solo un'alternativa senza gioco
+  principale (o con un principale senza niente) si scarica per conto suo.
+  Le .mra si leggono una volta e restano in .scrape_cache/mra_info.tsv
+  (rilette quando cambiano).
   I messaggi dello scraper sono in inglese.
 
 VIDEO

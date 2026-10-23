@@ -29,6 +29,7 @@ or on the command line. Without credentials the ss source is skipped.
 import argparse
 import base64
 import configparser
+import datetime
 import hashlib
 import html
 import html.parser
@@ -181,6 +182,9 @@ class Http:
     def __init__(self, delay):
         self.delay = delay
         self.last = 0
+        # set when an answer is not a real one (network, server, quota): the game is not
+        # remembered as "not found" (see NotFound); the caller clears it
+        self.trouble = False
 
     def get(self, url, tries=3, ua=UA):
         """bytes, None if not found; self.status = HTTP code (None on network errors)"""
@@ -198,31 +202,53 @@ class Http:
             except urllib.error.HTTPError as e:
                 self.status = e.code
                 if e.code in (400, 401, 403, 404, 410):
+                    if e.code != 404:
+                        self.trouble = True
                     return None
                 if e.code == 429 or e.code >= 500:
                     time.sleep(2 + 3 * t)
                     continue
+                self.trouble = True
                 return None
             except Exception as e:
                 log('   network:', e)
                 time.sleep(2 + 3 * t)
+        self.trouble = True
         return None
 
 
-def cache_json(cache, name, fetch):
-    """API answers saved on disk, so the requests are not repeated"""
+def write_file(path, data):
+    """the whole file with one write() through a .tmp: the SD of the MiSTer is mounted with
+    "sync", every write() waits for the card (a gamelist written in 8 KB pieces took a minute)"""
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    tmp = path + '.tmp'
+    with open(tmp, 'wb', buffering=0) as f:
+        view = memoryview(data)
+        while view:
+            view = view[f.write(view):]
+    os.replace(tmp, path)
+
+
+def cache_json(cache, name, fetch, fresh=False):
+    """API answers saved on disk, so the requests are not repeated; fresh: a "not found"
+    saved ({}) is asked again, fresh='all': any answer is asked again (the saved one
+    stays if there is no new answer)"""
     path = os.path.join(cache, re.sub(r'[^\w.()+-]', '_', name)[:150] + '.json')
+    old = None
     if os.path.exists(path):
         try:
             with open(path, encoding='utf-8') as f:
-                return json.load(f)
+                old = json.load(f)
+            if (old and fresh != 'all') or not fresh:
+                return old
         except Exception:
             pass
     data = fetch()
-    if data is not None:
-        os.makedirs(cache, exist_ok=True)
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(data, f)
+    if data is None:
+        return old
+    os.makedirs(cache, exist_ok=True)
+    write_file(path, json.dumps(data))
     return data
 
 
@@ -241,48 +267,186 @@ class Game:
         self.size = None
         self.ids = None       # (ScreenScraper id, libretro name)
         self.getcrc = None
+        self.alt = False      # .mra of _Arcade/_alternatives
+        self.main = None      # key of the main .mra of an alternative (list_arcade)
+        self.keys = []
 
 
-def mra_info(path):
-    """(setname, name) of an .mra file (regular expressions: much faster than the XML parser)"""
+MRA_TAGS = ('rbf', 'manufacturer', 'year', 'players', 'category', 'parent')
+MRA_CACHE = 'MRA1'  # format of .scrape_cache/mra_info.tsv
+
+
+def mra_read(path):
+    """what the scraper uses of an .mra, read once (regular expressions: much faster than
+    the XML parser): setname, name, the tags of MRA_TAGS and keys = setname, parent and the
+    names of the zip files, lowercase (as fe_alt.cpp)"""
     try:
         with open(path, encoding='utf-8', errors='replace') as f:
             text = f.read(65536)
     except Exception:
-        return None, None
+        return {}
+    out = {}
     m = re.search(r'<setname[^>]*>\s*([^<]+?)\s*</setname>', text)
     setname = m.group(1) if m else None
+    zips = []
+    for m in re.finditer(r'\bzip="([^"]*)"', text):
+        for z in m.group(1).split('|'):
+            z = z.strip().rsplit('/', 1)[-1]
+            if z.lower().endswith('.zip') and len(z) > 4:
+                zips.append(z[:-4])
     if not setname:
         m = re.search(r'<rom[^>]*\bzip="([^"|]+)', text)
         if m:
             setname = m.group(1).strip()
             if setname.lower().endswith('.zip'):
                 setname = setname[:-4]
+    if setname:
+        out['setname'] = setname
     m = re.search(r'<name>\s*([^<]+?)\s*</name>', text)
-    name = m.group(1) if m else None
-    if name:
-        name = name.replace('&amp;', '&').replace('&apos;', "'").replace('&quot;', '"')
-    return setname or None, name
+    if m:
+        out['name'] = m.group(1).replace('&amp;', '&').replace('&apos;', "'").replace('&quot;', '"')
+    for tag in MRA_TAGS:
+        m = re.search(r'<%s[^>]*>\s*([^<]*?)\s*</%s>' % (tag, tag), text)
+        if m and m.group(1):
+            out[tag] = html.unescape(m.group(1))
+    out['keys'] = list(dict.fromkeys(k.lower() for k in [setname or '', out.get('parent', '')] + zips if k))
+    return out
 
 
-def list_arcade(root):
+class MraCache:
+    """mra_read() of the .mra files in .scrape_cache/mra_info.tsv: an .mra is read again
+    only when new or changed (mtime, size); thousands of files on the SD take long"""
+
+    def __init__(self, cache):
+        self.path = os.path.join(cache, 'mra_info.tsv')
+        self.items = {}   # path relative to the root -> (mtime, size, info)
+        self.seen = set()
+        self.changed = False
+        self.read = 0
+        try:
+            with open(self.path, encoding='utf-8') as f:
+                if f.readline().rstrip('\n') == MRA_CACHE:
+                    for line in f:
+                        rel, mtime, size, info = line.rstrip('\n').split('\t', 3)
+                        self.items[rel] = (int(mtime), int(size), json.loads(info))
+        except (OSError, ValueError):
+            self.items = {}
+
+    def get(self, root, rel, st=None):
+        full = os.path.join(root, rel)
+        try:
+            st = st or os.stat(full)
+        except OSError:
+            return {}
+        self.seen.add(rel)
+        old = self.items.get(rel)
+        if old and old[0] == int(st.st_mtime) and old[1] == st.st_size:
+            return old[2]
+        info = mra_read(full)
+        self.items[rel] = (int(st.st_mtime), st.st_size, info)
+        self.changed = True
+        self.read += 1
+        return info
+
+    def save(self, prune=False):
+        """prune: also forget the files not asked in this run (after reading all of _Arcade)"""
+        if prune and set(self.items) - self.seen:
+            self.items = {k: v for k, v in self.items.items() if k in self.seen}
+            self.changed = True
+        if not self.changed:
+            return
+        text = MRA_CACHE + '\n' + ''.join('%s\t%d\t%d\t%s\n' % (k, v[0], v[1], json.dumps(v[2], ensure_ascii=False))
+                                          for k, v in sorted(self.items.items()))
+        try:
+            write_file(self.path, text)
+            self.changed = False
+        except OSError as ex:
+            log('   cache of the .mra files not written:', ex)
+
+
+MRA = {}  # root -> MraCache, see mra_cache()
+
+
+def mra_cache(root, cache):
+    if root not in MRA:
+        MRA[root] = MraCache(cache)
+    return MRA[root]
+
+
+ALT_DIR = '_alternatives'
+
+
+def list_arcade(root, cache):
+    """the .mra files of _Arcade; those of _alternatives have alt = True and main = the key of
+    the .mra outside _alternatives of the same game, when there is one (main_of())"""
     games = {}
     base = os.path.join(root, '_Arcade')
+    mc = mra_cache(root, cache)
     for d, dirs, files in os.walk(base):
         dirs[:] = [x for x in dirs if x.lower() not in ('cores', '_organized', 'mame', 'hbmame') and not x.startswith('.')]
+        rel = os.path.relpath(d, root)
+        alt = rel.replace('\\', '/').split('/')[1:2] == [ALT_DIR]
         for f in sorted(files):
             if not f.lower().endswith('.mra'):
                 continue
             key = f[:-4]
-            if key in games:
-                continue
+            if key in games and (alt or not games[key].alt):
+                continue  # the first one, but an .mra outside _alternatives wins
+            info = mc.get(root, os.path.join(rel, f))
             g = Game('arcade', key, './' + f)
-            g.setname, name = mra_info(os.path.join(d, f))
-            g.title = name or key
+            g.setname = info.get('setname')
+            g.title = info.get('name') or key
             g.ext = 'mra'
             g.ids = ARCADE
+            g.alt = alt
+            g.keys = info.get('keys', [])
+            g.altdir = os.path.basename(d).lstrip('_').lower() if alt else ''
             games[key] = g
-    return list(games.values())
+    mc.save(prune=True)
+    out = list(games.values())
+    main_of(out)
+    return out
+
+
+def main_of(games):
+    """g.main of the alternatives: the .mra outside _alternatives with (in order) the same
+    setname, the setname among its parent/zip names, its setname among the parent/zip names of
+    the alternative, a parent/zip name in common; zip names of more than 3 .mra (BIOS: neogeo,
+    qsound...) do not count. More of them: the name closest to the alternative's folder"""
+    mains = [g for g in games if not g.alt]
+    by_set, by_other = {}, {}
+    for g in mains:
+        s = (g.setname or '').lower()
+        if s:
+            by_set.setdefault(s, []).append(g)
+        for k in g.keys:
+            if k != s:
+                by_other.setdefault(k, []).append(g)
+    common = {k for k, v in by_other.items() if len(v) > 3}
+
+    def closest(alt, cands):
+        def score(g):
+            a, b = alt.altdir or alt.title.lower(), g.title.lower()
+            n = 0
+            while n < min(len(a), len(b)) and a[n] == b[n]:
+                n += 1
+            return (-n, g.key.lower())
+        return min(cands, key=score).key
+
+    for g in games:
+        g.main = None
+        if not g.alt:
+            continue
+        s = (g.setname or '').lower()
+        others = [k for k in g.keys if k != s]
+        steps = [by_set.get(s) if s else None,
+                 by_other.get(s) if s and s not in common else None,
+                 [m for k in others for m in by_set.get(k, [])],
+                 [m for k in others if k not in common for m in by_other.get(k, [])]]
+        for cands in steps:
+            if cands:
+                g.main = closest(g, cands)
+                break
 
 
 # Italian names accepted too (Portatili, Altro)
@@ -614,6 +778,9 @@ def list_romsets(root, folder, regions):
 #############################################################################
 # gamelist.xml
 
+GAMELISTS = {}  # gamelist.xml -> entries, of the systems scraped in this run (for build_index)
+
+
 def read_gamelist(path):
     out = {}
     if not os.path.exists(path):
@@ -631,25 +798,34 @@ def read_gamelist(path):
     return out
 
 
+def xml_text(s):
+    return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
 def write_gamelist(path, entries):
-    root = ET.Element('gameList')
+    """the same text as ElementTree with ET.indent(root, '  '), made directly: ElementTree
+    takes many seconds on the MiSTer for thousands of games"""
+    order = ['path'] + list(FIELDS) + list(GAMELIST_MEDIA.values())
+    out = ["<?xml version='1.0' encoding='utf-8'?>\n"]
     for key in sorted(entries, key=str.lower):
         e = entries[key]
-        g = ET.SubElement(root, 'game')
-        order = ['path'] + list(FIELDS) + list(GAMELIST_MEDIA.values())
-        for tag in order + [t for t in e if t not in order]:
-            if e.get(tag):
-                text = e[tag]
-                if tag == 'desc':
-                    # some sources give HTML entities ("&quot;") and CR LF
-                    text = html.unescape(text).replace('\r\n', '\n').replace('\r', '\n')
-                ET.SubElement(g, tag).text = text
-    if hasattr(ET, 'indent'):
-        ET.indent(root, '  ')
+        tags = [t for t in order + [t for t in e if t not in order] if e.get(t)]
+        if not tags:
+            out.append('\n  <game />')
+            continue
+        out.append('\n  <game>')
+        for tag in tags:
+            text = e[tag]
+            if tag == 'desc':
+                # some sources give HTML entities ("&quot;") and CR LF
+                text = html.unescape(text).replace('\r\n', '\n').replace('\r', '\n')
+            out.append('\n    <%s>%s</%s>' % (tag, xml_text(text), tag))
+        out.append('\n  </game>')
+    out[1:1] = ['<gameList>'] if entries else ['<gameList />']
+    if entries:
+        out.append('\n</gameList>')
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + '.tmp'
-    ET.ElementTree(root).write(tmp, encoding='utf-8', xml_declaration=True)
-    os.replace(tmp, path)
+    write_file(path, ''.join(out))
 
 
 #############################################################################
@@ -661,38 +837,41 @@ def adb_cache(lang):
     return 'adb_' + re.sub(r'[^a-z]', '', lang.lower())
 
 
-def adb_fetch(http, cache, games, lang):
-    """ArcadeDB, in batches: setname -> info"""
+def adb_fetch(http, cache, games, lang, failed=None, fresh=(), again=()):
+    """ArcadeDB, in batches of 25 names not in the cache: setname -> info; failed: set of the
+    names without an answer (network or service error); fresh: names whose "not found"
+    saved ({}) is asked again; again: names asked again whatever was saved"""
     out = {}
     names = sorted({g.setname for g in games if g.setname})
-    for i in range(0, len(names), 25):
-        batch = names[i:i + 25]
-        todo = []
-        for n in batch:
-            path = os.path.join(cache, n + '.json')
-            if os.path.exists(path):
-                with open(path, encoding='utf-8') as f:
-                    out[n] = json.load(f)
-            else:
+    todo = []
+    for n in names:
+        path = os.path.join(cache, n + '.json')
+        try:
+            with open(path, encoding='utf-8') as f:
+                out[n] = json.load(f)
+            if (not out[n] and n in fresh) or n in again:
                 todo.append(n)
-        if not todo:
-            continue
+        except (OSError, ValueError):
+            todo.append(n)
+    for i in range(0, len(todo), 25):
+        batch = todo[i:i + 25]
         url = 'https://adb.arcadeitalia.net/service_scraper.php?ajax=query_mame&lang=%s&use_parent=1&game_name=%s' % (
-            lang, urllib.parse.quote(';'.join(todo)))
+            lang, urllib.parse.quote(';'.join(batch)))
         data = http.get(url)
         try:
             res = json.loads(data.decode('utf-8'))['result']
         except Exception:
             log('   ArcadeDB: no answer, trying again next run')
+            if failed is not None:
+                failed.update(batch)
             continue  # network or service error: nothing in the cache
         found = {r.get('game_name'): r for r in res}
         os.makedirs(cache, exist_ok=True)
-        for n in todo:
+        for n in batch:
             r = found.get(n, {})
             out[n] = r
-            with open(os.path.join(cache, n + '.json'), 'w', encoding='utf-8') as f:
-                json.dump(r, f)
-        log('   ArcadeDB: %d/%d' % (min(i + 25, len(names)), len(names)))
+            write_file(os.path.join(cache, n + '.json'), json.dumps(r))
+        log('   ArcadeDB: %d/%d new' % (min(i + 25, len(todo)), len(todo)))
     return out
 
 
@@ -743,7 +922,7 @@ def libretro_media(g):
     return out
 
 
-def ss_fetch(http, cache, g, cred, lang):
+def ss_fetch(http, cache, g, cred, lang, fresh=False):
     if not cred or not g.ids:
         return None, {}
     params = {
@@ -770,6 +949,7 @@ def ss_fetch(http, cache, g, cred, lang):
         try:
             d = json.loads(data.decode('utf-8'))
         except Exception:
+            http.trouble = True
             return None  # error answers in plain text
         # no credentials on the SD card: the request URL and the account data are removed,
         # also from the media URLs (they are added back when downloading)
@@ -779,7 +959,7 @@ def ss_fetch(http, cache, g, cred, lang):
             if m.get('url'):
                 m['url'] = ss_strip_cred(m['url'])
         return d
-    d = cache_json(cache, '%s_%s' % (g.system, g.key), fetch)
+    d = cache_json(cache, '%s_%s' % (g.system, g.key), fetch, fresh)
     jeu = (d or {}).get('response', {}).get('jeu')
     if not jeu:
         return None, {}
@@ -1127,14 +1307,18 @@ _media_index = {}  # folder -> {file name without extension: path}
 
 def _media_add(index, dirpath, name):
     stem, ext = os.path.splitext(name)
+    ext = ext.lower()
     if ext in MEDIA_EXT:
-        old = index.get(stem)
-        if not old or MEDIA_EXT.index(ext) < MEDIA_EXT.index(os.path.splitext(old)[1]):
-            index[stem] = os.path.join(dirpath, name)
+        # lowercase, as Frontier looks for them: on the SD (exFAT) "Revision 1" and "revision 1"
+        # are the same file
+        old = index.get(stem.lower())
+        if not old or MEDIA_EXT.index(ext) < MEDIA_EXT.index(os.path.splitext(old)[1].lower()):
+            index[stem.lower()] = os.path.join(dirpath, name)
 
 
 def find_media(dirpath, key):
-    """media file of the game; each folder is read once (thousands of stat() on the SD are very slow)"""
+    """media file of the game, whatever the case of the letters; each folder is read once
+    (thousands of stat() on the SD are very slow)"""
     index = _media_index.get(dirpath)
     if index is None:
         index = _media_index[dirpath] = {}
@@ -1143,7 +1327,7 @@ def find_media(dirpath, key):
                 _media_add(index, dirpath, name)
         except OSError:
             pass
-    return index.get(key)
+    return index.get(key.lower())
 
 
 def media_saved(path):
@@ -1224,150 +1408,326 @@ def clean_name(name, fallback):
     return rest
 
 
+NOTFOUND_DAYS = 30
+
+
+class NotFound:
+    """games tried without finding all that was asked (no source has it), in
+    .scrape_cache/notfound_<system>.tsv: not tried again, nor counted, for NOTFOUND_DAYS days,
+    unless more types or sources are asked; --force, --refresh-data and --retry-missing try them"""
+
+    def __init__(self, cache, sysname, want, sources):
+        self.path = os.path.join(cache, 'notfound_%s.tsv' % sysname)
+        self.want, self.sources = set(want), set(sources)
+        self.items = {}  # key -> (date, types, sources)
+        self.changed = False
+        try:
+            with open(self.path, encoding='utf-8') as f:
+                for line in f:
+                    p = line.rstrip('\n').split('\t')
+                    if len(p) == 4:
+                        self.items[p[0]] = (p[1], set(p[2].split(',')) - {''}, set(p[3].split(',')) - {''})
+        except OSError:
+            pass
+
+    def skip(self, key):
+        it = self.items.get(key)
+        if not it:
+            return False
+        try:
+            age = (datetime.date.today() - datetime.date.fromisoformat(it[0])).days
+        except ValueError:
+            return False
+        return 0 <= age < NOTFOUND_DAYS and self.want <= it[1] and self.sources <= it[2]
+
+    def add(self, key):
+        self.items[key] = (datetime.date.today().isoformat(), self.want, self.sources)
+        self.changed = True
+
+    def remove(self, key):
+        if self.items.pop(key, None):
+            self.changed = True
+
+    def save(self):
+        if not self.changed:
+            return
+        if self.items or os.path.exists(self.path):
+            write_file(self.path, ''.join('%s\t%s\t%s\t%s\n' % (k, v[0], ','.join(sorted(v[1])), ','.join(sorted(v[2])))
+                                          for k, v in sorted(self.items.items())))
+        self.changed = False
+
+
+def chosen(games, names):
+    """the games called so (file name without extension, any case; for a game by title
+    also the name of one of its versions)"""
+    want = {n.lower() for n in names}
+    return [g for g in games if g.key.lower() in want or any(v[0].lower() in want for v in getattr(g, 'versions', ()))]
+
+
 def scrape(args, http, games, sysname, cred):
     fe = args.frontier
     gl_path = os.path.join(fe, 'gamelists', sysname, 'gamelist.xml')
+    t0 = time.time()
     entries = read_gamelist(gl_path)
     cache = os.path.join(fe, '.scrape_cache')
     types = args.types
     need = [t for t in ('snap', 'box', 'video') if t in types]  # without them a game is scraped again
+    redo = args.force or args.refresh_data
+    retry = redo or args.retry_missing
 
     if args.limit:
         games = games[:args.limit]
+    if args.game:
+        # only these games, and the alternatives that take from them
+        mine = {g.key for g in chosen(games, args.game)}
+        games = [g for g in games if g.key in mine or g.main in mine]
+        if not mine:
+            log('%s: %s not found among the games' % (sysname, ', '.join(args.game)))
     log('%s: %d games' % (sysname, len(games)))
+    by_key = {g.key: g for g in games}
+    dirty = not os.path.exists(gl_path)  # the gamelist is written only if something changes
 
     for g in games:  # names already saved with the "ZZZ(notgame):" marker
         e = entries.get(g.key)
         if e and e.get('name') and NOTGAME.match(e['name']):
             e['name'] = clean_name(e['name'], g.title)
+            dirty = True
 
-    def is_complete(g, e):
-        have = {t: find_media(os.path.join(fe, 'media', sysname, t), g.key) for t in types}
+    mdir = {t: os.path.join(fe, 'media', sysname, t) for t in types}
+
+    def media_of(key):
+        return {t: find_media(mdir[t], key) for t in types}
+
+    def is_complete(g, e, have):
         name = None if e.get('name') == g.title and not e.get('desc') else e.get('name')  # fallback name: not a real one
         return bool((args.no_text or (name and e.get('desc'))) and all(have.get(t) for t in need))
 
-    # the counter only counts the games that need work, not those already complete
-    if args.force or args.refresh_data:
-        todo = len(games)
-    else:
-        todo = sum(1 for g in games if not is_complete(g, entries.get(g.key, {})))
-    log('%s: %d to scrape' % (sysname, todo))
-    STATUS.set(True, system=sysname, step='scrape', n=0, total=todo)
+    def has_data(key):
+        """the game has something to give to its alternatives"""
+        e, g = entries.get(key) or {}, by_key.get(key)
+        return bool(e.get('desc') or (e.get('name') and g and e['name'] != g.title) or any(media_of(key).values()))
 
-    adb = {}
+    # one look at every game: complete, alternative (from its main game), not found
+    # before (skipped) or to scrape; the counter only counts the last ones
+    STATUS.set(True, system=sysname, step='check', n=0, total=0)
+    nf = NotFound(cache, sysname, list(types) + ([] if args.no_text else ['text']), args.sources)
+    work, alts, skipped, done = [], [], 0, 0
+    for g in games:
+        e = entries.get(g.key, {})
+        if g.main and g.main in by_key:
+            alts.append(g)
+            continue
+        have = media_of(g.key)
+        if not redo and is_complete(g, e, have):
+            nf.remove(g.key)
+            if share_versions(g, e, entries, have, sysname, types):
+                done += 1
+            continue
+        if not retry and nf.skip(g.key):
+            skipped += 1
+            if share_versions(g, e, entries, have, sysname, types):
+                done += 1
+            continue
+        work.append(g)
+    work_keys = {g.key for g in work}
+    # alternatives scraped on their own: their main game has nothing and is not scraped now
+    alone = [g for g in alts if g.main not in work_keys and not has_data(g.main)
+             and not (not redo and is_complete(g, entries.get(g.key, {}), media_of(g.key)))
+             and (retry or not nf.skip(g.key))]
+    todo = len(work) + len(alone)
+    dirty = dirty or done > 0
+    log('%s: %d to scrape%s, %d alternatives from their main game; check %.1f s' % (
+        sysname, todo, (', %d not found in the last %d days skipped (--retry-missing)' % (skipped, NOTFOUND_DAYS)) if skipped else '',
+        len(alts) - len(alone), time.time() - t0))
+
+    # games not found before and tried again: the "not found" answers in the caches are asked again
+    # a game asked by name (--game): any saved answer is asked again
+    fresh = {g.key for g in work + alone if g.key in nf.items or args.game}
+    fresh_sets = {g.setname for g in work + alone if g.key in fresh and g.setname}
+    adb, adb_failed = {}, set()
     if 'adb' in args.sources and (sysname == 'arcade' or any(g.setname for g in games)):
-        adb = adb_fetch(http, os.path.join(cache, adb_cache(args.lang)), games, args.lang)
+        STATUS.set(True, step='adb')
+        t1 = time.time()
+        adb = adb_fetch(http, os.path.join(cache, adb_cache(args.lang)), work + alone, args.lang, adb_failed, fresh_sets,
+                        fresh_sets if args.game else ())
+        if work or alone:
+            log('%s: ArcadeDB %.1f s' % (sysname, time.time() - t1))
+    STATUS.set(True, system=sysname, step='scrape', n=0, total=todo)
 
     # libretro pictures that do not exist (404), remembered between runs (--force and --refresh-data ignore them)
     os.makedirs(cache, exist_ok=True)
     miss_path = os.path.join(cache, 'libretro_miss_%s.txt' % sysname)
     misses = set()
-    if not (args.force or args.refresh_data) and os.path.exists(miss_path):
+    if not redo and os.path.exists(miss_path):
         with open(miss_path, encoding='utf-8') as f:
             misses = set(l.rstrip('\n') for l in f)
     miss_file = open(miss_path, 'a', encoding='utf-8')
 
-    last_write = time.time()
-    done = 0
-    n = 0  # games that needed work
-    try:
-        for g in games:
-            e = entries.get(g.key, {})
-            mdir = {t: os.path.join(fe, 'media', sysname, t) for t in types}
-            have = {t: find_media(mdir[t], g.key) for t in types}
-            if e.get('name') == g.title and not e.get('desc'):
-                del e['name']  # fallback name written by a previous run: the real one is looked for
-            complete = ((args.no_text or (e.get('name') and e.get('desc')))
-                        and all(have.get(t) for t in need))
-            if complete and not args.force and not args.refresh_data:
-                if share_versions(g, e, entries, have, sysname, types):
-                    done += 1
+    def fetch(g):
+        """the data and the media of a game from the sources"""
+        e = entries.get(g.key, {})
+        have = media_of(g.key)
+        if e.get('name') == g.title and not e.get('desc'):
+            del e['name']  # fallback name written by a previous run: the real one is looked for
+        http.trouble = g.setname in adb_failed
+        before = {k: e.get(k) for k in FIELDS}
+        info, urls = {}, {}
+        for src in args.sources:
+            if src == 'adb' and g.setname in adb:
+                i, m = adb_info(adb[g.setname], Image is None)
+            elif src == 'ss':
+                try:
+                    i, m = ss_fetch(http, os.path.join(cache, 'ss'), g, cred, args.lang,
+                                    ('all' if args.game else True) if g.key in fresh else False)
+                except (FileNotFoundError, NotADirectoryError) as ex:
+                    # file moved or deleted while the scraper runs
+                    log('   file not readable, skipped:', ex)
+                    i, m = None, {}
+                    http.trouble = True
+            elif src == 'libretro':
+                i, m = None, libretro_media(g)
+            else:
                 continue
+            for k, v in (i or {}).items():
+                if v and not info.get(k):
+                    info[k] = v
+            for k, v in m.items():
+                urls.setdefault(k, [])
+                urls[k] += v if isinstance(v, list) else [v]
 
-            n += 1
-            info, urls = {}, {}
-            for src in args.sources:
-                if src == 'adb' and g.setname in adb:
-                    i, m = adb_info(adb[g.setname], Image is None)
-                elif src == 'ss':
-                    try:
-                        i, m = ss_fetch(http, os.path.join(cache, 'ss'), g, cred, args.lang)
-                    except (FileNotFoundError, NotADirectoryError) as ex:
-                        # file moved or deleted while the scraper runs
-                        log('   file not readable, skipped:', ex)
-                        i, m = None, {}
-                elif src == 'libretro':
-                    i, m = None, libretro_media(g)
+        e['path'] = g.path
+        if info.get('name'):
+            info['name'] = clean_name(info['name'], g.title)
+        for k, v in info.items():
+            if args.no_text and k != 'name':
+                continue
+            if v and (redo or not e.get(k)):
+                e[k] = str(v)
+        if not e.get('name'):
+            e['name'] = g.title
+
+        got = []
+        for t in types:
+            if have[t] and not args.force:
+                continue
+            for url in urls.get(t, []):
+                if url in misses and g.key not in fresh:
+                    continue
+                data = http.get(url)
+                if not data and http.status == 404 and 'libretro.com' in url and url not in misses:
+                    misses.add(url)  # not there: not asked again in the next runs
+                    miss_file.write(url + '\n')
+                    miss_file.flush()
+                if not data or len(data) < 100:
+                    continue
+                if t == 'video':
+                    os.makedirs(mdir[t], exist_ok=True)
+                    path = os.path.join(mdir[t], g.key + '.mp4')
+                    with open(path, 'wb') as f:
+                        f.write(data)
+                    mjv = path[:-4] + '.mjv'
+                    if args.mjv and shutil.which('ffmpeg') and make_mjv(path, mjv, args.video_fps, args.video_width, args.video_seconds):
+                        if not args.keep_mp4:
+                            os.remove(path)
+                        path = mjv
                 else:
-                    continue
-                for k, v in (i or {}).items():
-                    if v and not info.get(k):
-                        info[k] = v
-                for k, v in m.items():
-                    urls.setdefault(k, [])
-                    urls[k] += v if isinstance(v, list) else [v]
+                    path = save_image(data, mdir[t], g.key, t, args.max_size)
+                if path:
+                    media_saved(path)
+                    have[t] = path
+                    got.append(t)
+                    break
 
-            e['path'] = g.path
-            if info.get('name'):
-                info['name'] = clean_name(info['name'], g.title)
-            for k, v in info.items():
-                if args.no_text and k != 'name':
-                    continue
-                if v and (args.force or args.refresh_data or not e.get(k)):
-                    e[k] = str(v)
-            if not e.get('name'):
-                e['name'] = g.title
+        for t in types:
+            if have[t]:
+                e[GAMELIST_MEDIA[t]] = '../../media/%s/%s/%s' % (sysname, t, os.path.basename(have[t]))
+        entries[g.key] = e
+        share_versions(g, e, entries, have, sysname, types)
+        # still missing something with all the sources answering: not tried again for a while
+        missing = not is_complete(g, e, have)
+        if not missing:
+            nf.remove(g.key)
+        elif not http.trouble:
+            nf.add(g.key)
+        # something really new: pictures, or data (not just the name of the file)
+        new = bool(got) or any(e.get(k) and e.get(k) != before[k] and (k != 'name' or e[k] != g.title) for k in FIELDS)
+        return e, got, new, missing and not http.trouble
 
-            got = []
-            for t in types:
-                if have[t] and not args.force:
-                    continue
-                for url in urls.get(t, []):
-                    if url in misses:
+    def from_main(g):
+        """an alternative: what it misses from its main game (its own name stays), media
+        pointing to the files of the main game; 1 if something changes"""
+        e, m = entries.get(g.key, {}), entries.get(g.main) or {}
+        have, mhave = media_of(g.key), media_of(g.main)
+        old = dict(e)
+        for k, v in m.items():
+            if v and k not in ('path', 'name') and k not in GAMELIST_MEDIA.values() and (args.refresh_data or args.force or not e.get(k)):
+                e[k] = v
+        e['path'] = g.path
+        if not e.get('name'):
+            e['name'] = g.title
+        for t, tag in GAMELIST_MEDIA.items():
+            if t in types and (have.get(t) or mhave.get(t)):
+                e[tag] = '../../media/%s/%s/%s' % (sysname, t, os.path.basename(have.get(t) or mhave[t]))
+            elif not e.get(tag) and m.get(tag):
+                e[tag] = m[tag]
+        if e == old:
+            return 0
+        entries[g.key] = e
+        nf.remove(g.key)
+        return 1
+
+    last_write = time.time()
+    updated, notfound = 0, skipped  # games with something new, games no source has
+    n = 0  # games that needed work
+    total = todo
+    t1 = time.time()
+    try:
+        # the main games first, then the alternatives take from them
+        for g in work + alts:
+            own = g.key in work_keys
+            if own or not has_data(g.main):
+                if not own:
+                    # an alternative whose main game has nothing: on its own
+                    if not redo and is_complete(g, entries.get(g.key, {}), media_of(g.key)):
                         continue
-                    data = http.get(url)
-                    if not data and http.status == 404 and 'libretro.com' in url:
-                        misses.add(url)  # not there: not asked again in the next runs
-                        miss_file.write(url + '\n')
-                        miss_file.flush()
-                    if not data or len(data) < 100:
+                    if not retry and nf.skip(g.key):
+                        notfound += 1
                         continue
-                    if t == 'video':
-                        os.makedirs(mdir[t], exist_ok=True)
-                        path = os.path.join(mdir[t], g.key + '.mp4')
-                        with open(path, 'wb') as f:
-                            f.write(data)
-                        mjv = path[:-4] + '.mjv'
-                        if args.mjv and shutil.which('ffmpeg') and make_mjv(path, mjv, args.video_fps, args.video_width, args.video_seconds):
-                            if not args.keep_mp4:
-                                os.remove(path)
-                            path = mjv
-                    else:
-                        path = save_image(data, mdir[t], g.key, t, args.max_size)
-                    if path:
-                        media_saved(path)
-                        have[t] = path
-                        got.append(t)
-                        break
+                    if 'adb' in args.sources and g.setname and g.setname not in adb and g.setname not in adb_failed:
+                        adb.update(adb_fetch(http, os.path.join(cache, adb_cache(args.lang)), [g], args.lang, adb_failed))
+                n += 1
+                if n > total:
+                    total = n
+                e, got, new, missing = fetch(g)
+                updated += new
+                notfound += missing
+                done += 1
+                dirty = True
+                log('[%d/%d] %s: %s%s' % (n, total, g.key, e.get('name', ''), (' + ' + ' '.join(got)) if got else ''))
+                STATUS.set(n=n, total=total, game=e.get('name', g.key))
+            elif from_main(g):
+                done += 1
+                dirty = True
 
-            for t in types:
-                if have[t]:
-                    e[GAMELIST_MEDIA[t]] = '../../media/%s/%s/%s' % (sysname, t, os.path.basename(have[t]))
-            entries[g.key] = e
-            share_versions(g, e, entries, have, sysname, types)
-            done += 1
-            log('[%d/%d] %s: %s%s' % (n, todo, g.key, e.get('name', ''), (' + ' + ' '.join(got)) if got else ''))
-            STATUS.set(n=n, game=e.get('name', g.key))
-
-            # writing the gamelist (thousands of entries) takes about a minute on the MiSTer:
+            # writing the gamelist (thousands of entries) takes long on the MiSTer:
             # every few minutes, not every 25 games
-            if time.time() - last_write > 300:
+            if dirty and time.time() - last_write > 300:
                 write_gamelist(gl_path, entries)
+                nf.save()
                 last_write = time.time()
     finally:
         miss_file.close()
-        write_gamelist(gl_path, entries)  # also on Ctrl+C
-    log('%s: %d updated, %s' % (sysname, done, gl_path))
+        if dirty:
+            t2 = time.time()
+            write_gamelist(gl_path, entries)  # also on Ctrl+C
+            log('%s: gamelist written, %.1f s' % (sysname, time.time() - t2))
+        nf.save()
+        # the totals of the run, for Frontier ("Scraper finished: 3 games with new data or pictures")
+        STATUS.set(True, updated=int(STATUS.data.get('updated', 0)) + updated,
+                   notfound=int(STATUS.data.get('notfound', 0)) + notfound)
+    GAMELISTS[gl_path] = entries
+    log('%s: %d games with new data or pictures, %d not found; %d entries changed, %s (%.0f s)' % (
+        sysname, updated, notfound, done, gl_path, time.time() - t0))
 
 
 #############################################################################
@@ -1671,10 +2031,7 @@ def summary_cache(cache, kind, extract):
         if i % 1000 == 0:
             log('   %d/%d (%.0f s)' % (i, len(todo), time.time() - t0))
     if todo:
-        tmp = path + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump({'version': INDEX_SUMMARY, 'items': items}, f)
-        os.replace(tmp, path)
+        write_file(path, json.dumps({'version': INDEX_SUMMARY, 'items': items}))
     return items
 
 
@@ -1743,26 +2100,51 @@ def core_name(rbf, cores):
     return re.sub(r'^arcade-', '', r)
 
 
-def mra_index_info(path):
-    """<rbf>, <manufacturer>, <year>, <setname> of an .mra file"""
+INDEX_COLS = ('core', 'publisher', 'developer', 'genre', 'subgenre', 'year', 'series', 'players')
+
+
+def index_rows(out, touched, root_mras, mc, root):
+    """rows of the meta.tsv there that can stay: of the systems not scraped in this run
+    (touched), with the gamelist older than meta.tsv and the same tables and scraper;
+    arcade also with the same .mra files in _Arcade. System -> [rows as lists of strings:
+    system, file, the columns of INDEX_COLS] (not parsed further: thousands of rows)"""
+    keep = {}
     try:
-        with open(path, encoding='utf-8', errors='replace') as f:
-            text = f.read(65536)
-    except Exception:
+        t = os.path.getmtime(out)
+        here = os.path.dirname(os.path.abspath(__file__))
+        if any(os.path.getmtime(os.path.join(here, f)) >= t for f in ('genres.ini', 'publishers.ini', 'arcade_cores.ini', os.path.basename(__file__))
+               if os.path.exists(os.path.join(here, f))):
+            return {}
+        with open(out, encoding='utf-8') as f:
+            if not f.readline().startswith(INDEX_VERSION + '\t'):
+                return {}
+            for line in f:
+                p = line.rstrip('\n').split('\t')
+                if len(p) == 2 + len(INDEX_COLS):
+                    keep.setdefault(p[0], []).append(p)
+    except (OSError, ValueError):
         return {}
-    out = {}
-    for tag in ('rbf', 'manufacturer', 'year', 'setname', 'players', 'category'):
-        m = re.search(r'<%s[^>]*>\s*([^<]*?)\s*</%s>' % (tag, tag), text)
-        if m:
-            out[tag] = html.unescape(m.group(1))
-    if not out.get('setname'):
-        m = re.search(r'<rom[^>]*\bzip="([^"|]+)', text)
-        if m:
-            out['setname'] = re.sub(r'(?i)\.zip$', '', m.group(1).strip())
-    return out
+    gl_dir = os.path.join(os.path.dirname(os.path.dirname(out)), 'gamelists')
+    for sysname in list(keep):
+        gl = os.path.join(gl_dir, sysname, 'gamelist.xml')
+        try:
+            ok = sysname not in touched and (not os.path.exists(gl) and sysname == 'arcade' or os.path.getmtime(gl) < t)
+        except OSError:
+            ok = False
+        if ok and sysname == 'arcade':
+            # the same .mra files, none changed
+            before = mc.read
+            for f in root_mras:
+                mc.get(root, os.path.join('_Arcade', f))
+            ok = mc.read == before and sorted(r[1] for r in keep[sysname]) == sorted(root_mras)
+        if not ok:
+            del keep[sysname]
+    return keep
 
 
-def build_index(args):
+def build_index(args, touched=None):
+    """touched: systems scraped in this run, the others can be copied from the meta.tsv
+    there (index_rows()); None: all of them made again (--index)"""
     t0 = time.time()
     STATUS.set(True, step='index', system='', n=0, total=0)
     fe = args.frontier
@@ -1777,20 +2159,34 @@ def build_index(args):
     def cache_name(sysname, key):
         return re.sub(r'[^\w.()+-]', '_', '%s_%s' % (sysname, key))[:150] + '.json'
 
-    rows = []  # [system, file, {column: [values]}]
+    names = {}  # companies() of the same text: once
+
+    def company(text):
+        if text not in names:
+            names[text] = companies(text, aliases)
+        return list(names[text])
+
+    rows = []  # [system, file, {column: [values]}, ...] or a row of index_rows()
     gl_dir = os.path.join(fe, 'gamelists')
     systems = sorted(d for d in os.listdir(gl_dir) if os.path.isfile(os.path.join(gl_dir, d, 'gamelist.xml'))) if os.path.isdir(gl_dir) else []
     if 'arcade' not in systems and os.path.isdir(os.path.join(args.root, '_Arcade')):
         systems.append('arcade')
+    # the .mra files of the list Arcade of Frontier: _Arcade only, not its subfolders
+    base = os.path.join(args.root, '_Arcade')
+    root_mras = sorted(f for f in os.listdir(base) if f.lower().endswith('.mra') and os.path.isfile(os.path.join(base, f))) if os.path.isdir(base) else []
+    mc = mra_cache(args.root, cache)
+    out = os.path.join(fe, '.cache', 'meta.tsv')
+    keep = index_rows(out, touched, root_mras, mc, args.root) if touched is not None else {}
     for sysname in systems:
-        entries = read_gamelist(os.path.join(gl_dir, sysname, 'gamelist.xml'))
+        if sysname in keep:
+            rows += keep[sysname]
+            continue
+        gl = os.path.join(gl_dir, sysname, 'gamelist.xml')
+        entries = GAMELISTS.get(gl) or read_gamelist(gl)
         items = []  # (file, gamelist entry, .mra info)
         if sysname == 'arcade':
-            # the .mra files of the list Arcade of Frontier: _Arcade only, not its subfolders
-            base = os.path.join(args.root, '_Arcade')
-            for f in sorted(os.listdir(base)) if os.path.isdir(base) else []:
-                if f.lower().endswith('.mra') and os.path.isfile(os.path.join(base, f)):
-                    items.append((f, entries.get(f[:-4], {}), mra_index_info(os.path.join(base, f))))
+            for f in root_mras:
+                items.append((f, entries.get(f[:-4], {}), mc.get(args.root, os.path.join('_Arcade', f))))
         else:
             items = [(k, e, {}) for k, e in entries.items()]
 
@@ -1799,8 +2195,8 @@ def build_index(args):
             key = f[:-4] if sysname == 'arcade' else f
             cols = {}
             cols['core'] = [core_name(mra['rbf'], cores)] if mra.get('rbf') else []
-            cols['publisher'] = companies(e.get('publisher') or mra.get('manufacturer', ''), aliases)
-            cols['developer'] = companies(e.get('developer') or mra.get('manufacturer', ''), aliases)
+            cols['publisher'] = company(e.get('publisher') or mra.get('manufacturer', ''))
+            cols['developer'] = company(e.get('developer') or mra.get('manufacturer', ''))
             gen = []
             si = ss.get(cache_name(sysname, key))
             ai = adb.get((mra.get('setname') or '') + '.json') if mra.get('setname') else None
@@ -1848,28 +2244,38 @@ def build_index(args):
         rows += sys_rows
 
     # one spelling for the same name ("SEGA", "Sega"): the most used one
+    def values(r, c):
+        return r[2][c] if isinstance(r[2], dict) else [v for v in r[2 + INDEX_COLS.index(c)].split('|') if v]
+
     for c in ('publisher', 'developer', 'series'):
         count = {}
         for r in rows:
-            for v in r[2][c]:
+            for v in values(r, c):
                 count[v] = count.get(v, 0) + 1
         spelling = {}
         for v, n in sorted(count.items(), key=lambda x: (-x[1], x[0])):
             spelling.setdefault(v.lower(), v)
         for r in rows:
-            r[2][c] = list(dict.fromkeys(spelling[v.lower()] for v in r[2][c]))
+            vals = values(r, c)
+            new = list(dict.fromkeys(spelling[v.lower()] for v in vals))
+            if isinstance(r[2], dict):
+                r[2][c] = new
+            elif new != vals:
+                r[2 + INDEX_COLS.index(c)] = '|'.join(clean_value(v) for v in new)
 
-    out = os.path.join(fe, '.cache', 'meta.tsv')
+    mc.save()
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    cols = ('core', 'publisher', 'developer', 'genre', 'subgenre', 'year', 'series', 'players')
-    tmp = out + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as fh:
-        fh.write('%s\t%s\n' % (INDEX_VERSION, time.strftime('%Y-%m-%d %H:%M')))
-        for r in rows:
-            fh.write('\t'.join([r[0], r[1].replace('\t', ' ')] + ['|'.join(clean_value(v) for v in r[2][c]) for c in cols]) + '\n')
-    os.replace(tmp, out)
-    with_genre = sum(1 for r in rows if r[2]['genre'])
-    log('index: %d games of %d systems (%d with a genre), %.0f s -> %s' % (len(rows), len(systems), with_genre, time.time() - t0, out))
+    cols = INDEX_COLS
+    lines = ['%s\t%s\n' % (INDEX_VERSION, time.strftime('%Y-%m-%d %H:%M'))]
+    for r in rows:
+        if isinstance(r[2], dict):
+            lines.append('\t'.join([r[0], r[1].replace('\t', ' ')] + ['|'.join(clean_value(v) for v in r[2][c]) for c in cols]) + '\n')
+        else:
+            lines.append('\t'.join(r) + '\n')
+    write_file(out, ''.join(lines))
+    with_genre = sum(1 for r in rows if values(r, 'genre'))
+    log('index: %d games of %d systems (%d with a genre%s), %.0f s -> %s' % (
+        len(rows), len(systems), with_genre, ', %d systems as they were' % len(keep) if keep else '', time.time() - t0, out))
     if unknown:
         log('index: genres not in genres.ini (games): ' + ', '.join('%s (%d)' % kv for kv in sorted(unknown.items(), key=lambda x: -x[1])))
 
@@ -1905,7 +2311,10 @@ def main():
     ap.add_argument('--box-regions', help='preferred regions for the box art (ScreenScraper), e.g. jp or jp,us; also in scraper.ini: [scraper] box_regions = jp')
     ap.add_argument('--systems-info', action='store_true', help='only the data of the systems (Wikipedia: description, maker, year, hardware) for --system/--category/--all-systems; also done with the games, unless --no-text')
     ap.add_argument('--index', action='store_true', help='only the data of Frontier\'s "Lists" (.cache/meta.tsv) from the gamelists and the cache, no network; also done at the end of every run')
+    ap.add_argument('--game', action='append', default=[], help='only this game of the system (file name without extension, '
+                    'repeatable): asked again to the sources, its data and pictures downloaded again')
     ap.add_argument('--force', action='store_true', help='download again also what is already there')
+    ap.add_argument('--retry-missing', action='store_true', help='try again now the games not found in the last %d days (otherwise skipped)' % NOTFOUND_DAYS)
     ap.add_argument('--refresh-data', action='store_true', help='write again the data (names, descriptions, genres...) in the language of --lang, without downloading again the pictures already there')
     ap.add_argument('--limit', type=int, default=0, help='at most N games per system (tests)')
     ap.add_argument('--no-crc', action='store_true', help='do not compute the CRC of the files (faster, ScreenScraper less precise)')
@@ -1921,6 +2330,8 @@ def main():
     else:
         args.types = [t for t in MEDIA_TYPES if t not in OPTIONAL_TYPES or getattr(args, t)]
     STATUS.path = args.status
+    if args.game:
+        args.force = True  # a game asked by name: all again
     args.sources = [s.strip() for s in args.sources.split(',') if s.strip()]
 
     # credentials: command line or <frontier>/scraper.ini, section [screenscraper]
@@ -1987,15 +2398,19 @@ def main():
         log('box art: first %s' % ', '.join(SS_BOX))
     todo = list(dict.fromkeys(folders))
     # the data of the systems (Wikipedia), before their games
-    if args.systems_info or (todo and not args.no_text and not args.groups):
+    if args.systems_info or (todo and not args.no_text and not args.groups and not args.game):
         scrape_systems(args, http, todo)
         if args.systems_info:
             folders, todo, args.arcade = [], [], False
     arcade = 1 if args.arcade else 0
-    STATUS.set(True, systems=len(todo) + arcade, done=0)
+    STATUS.set(True, systems=len(todo) + arcade, done=0, updated=0, notfound=0)
+    cache = os.path.join(args.frontier, '.scrape_cache')
     if args.arcade:
         STATUS.set(True, system='arcade', step='list', n=0, total=0)
-        scrape(args, http, list_arcade(args.root), 'arcade', cred)
+        t0 = time.time()
+        games = list_arcade(args.root, cache)
+        log('arcade: list %.1f s (%d .mra read, the others from the cache)' % (time.time() - t0, mra_cache(args.root, cache).read))
+        scrape(args, http, games, 'arcade', cred)
     for sn, folder in enumerate(todo, 1):
         STATUS.set(True, system=folder.lower(), step='list', n=0, total=0, done=sn - 1 + arcade)
         patterns = exts.get(folder.lower())
@@ -2011,6 +2426,9 @@ def main():
             games = list_system(args.root, folder, patterns, not args.no_crc)
         else:
             games = list_titles(args.root, folder, patterns, not args.no_crc, regions)
+            if args.game and not chosen(games, args.game):
+                # a file of the folders that is not in the list by title (a hack, a copy)
+                games = list_system(args.root, folder, patterns, not args.no_crc)
         if games:
             scrape(args, http, games, folder.lower(), cred)
 
@@ -2022,7 +2440,8 @@ def main():
 
     # the data of Frontier's "Lists" from the gamelists just written
     if args.index or ((args.arcade or folders) and not args.groups):
-        build_index(args)
+        touched = None if args.index else {f.lower() for f in todo} | ({'arcade'} if args.arcade else set())
+        build_index(args, touched)
 
     if not args.arcade and not folders and not args.convert_videos and not args.index and not args.systems_info:
         ap.print_help()

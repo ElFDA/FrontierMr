@@ -51,21 +51,43 @@ Frontier Settings -> Scraper:
 
 | Voce | Cosa fa |
 |---|---|
-| Start scraping | A avvia lo scraper in sottofondo; di nuovo A lo ferma. A destra l'avanzamento ("SNES 120/840 (2/5)", poi finished / stopped / error). Intanto puoi continuare a usare Frontier e giocare. |
+| Start scraping | A avvia lo scraper in sottofondo; di nuovo A lo ferma. A destra l'avanzamento ("SNES 120/840 (2/5)", poi finished / stopped / error; "finished: 3 updated" = 3 giochi hanno avuto dati o immagini nuove, "finished: nothing new" = niente da aggiungere). Intanto puoi continuare a usare Frontier e giocare: lo scraper lavora sull'altro core del processore. |
 | Get systems data only | solo i dati dei sistemi, da Wikipedia: pochi minuti, niente giochi |
 | Systems | Arcade e le categorie; dentro una categoria "All" o un sistema alla volta, ON/OFF |
 | Language | inglese (predefinito), italiano, francese, tedesco, spagnolo, portoghese, giapponese: descrizioni e generi (in inglese quando un testo manca in quella lingua) |
 | Texts | nomi, descrizioni, generi, editori... ON/OFF |
 | Box art, Screenshots, Title screens, Marquees and logos, Fanart, Videos | ciascuno ON/OFF; all'inizio tutti ON tranne Fanart |
-| Games already scraped | salta (solo quello che manca, predefinito), di nuovo i testi (dati nella lingua scelta, immagini tenute), di nuovo tutto |
+| Games already scraped | salta (solo quello che manca, predefinito), di nuovo i testi (dati nella lingua scelta, immagini tenute), di nuovo tutto, retry not found (anche i giochi che nessuna fonte aveva negli ultimi 30 giorni) |
 
 Le scelte restano in `frontier.ini`. Fermare è sicuro: quello che è stato
 scaricato resta e il giro successivo riprende da lì. Gli errori di
 ScreenScraper (la quota giornaliera, la rete) vengono riprovati al giro
 successivo.
 
+**Giochi non trovati.** Quando nessuna fonte ha un gioco, o non tutto quello
+che hai chiesto (per esempio nessuna copertina da nessuna parte), lo scraper
+se lo ricorda e lo salta per 30 giorni: il contatore mostra solo i giochi
+davvero da fare, e hack, bootleg e homebrew non vengono richiesti a ogni giro.
+Si ritentano dopo 30 giorni, quando chiedi altre immagini o aggiungi una fonte
+(per esempio il tuo account ScreenScraper), oppure subito con "Games already
+scraped" -> retry not found.
+
+**Alternative dell'arcade.** I giochi di `_Arcade/_alternatives` prendono i
+dati e le immagini del loro gioco principale (la `.mra` fuori da
+`_alternatives` dello stesso set MAME: "Street Fighter II (USA 910522)" da
+"Street Fighter II (World 910522)") e tengono il loro nome. Per loro non si
+scarica né si copia niente; solo un'alternativa senza gioco principale viene
+scaricata per conto suo.
+
 Le immagini nuove di un sistema compaiono quando quel sistema è finito; per
 vederle subito su un sistema già aperto tieni premuto X su di esso (o F5).
+
+**Un gioco solo.** Apri i dettagli di un gioco (X) e scegli **Scrape this
+game**, sotto "Add to list...": lo scraper richiede quel gioco alle fonti e
+riscarica i suoi dati e le sue immagini, con il contenuto scelto in Frontier
+Settings -> Scraper (si aggiornano anche le alternative arcade che prendono da
+lui). Lavora in sottofondo, circa un minuto; le immagini nuove compaiono quando
+ha finito. Utile per un gioco con un'immagine sbagliata o mancante.
 
 ## 4. Da quale regione arrivano le immagini
 
@@ -103,7 +125,7 @@ Tutto va in `/media/fat/frontier`:
 |---|---|
 | `gamelists/<sistema>/gamelist.xml` | i dati dei giochi (formato EmulationStation) |
 | `media/<sistema>/<tipo>/` | immagini e video (`box`, `snap`, `title`, `marquee`, `fanart`, `video`) |
-| `.scrape_cache/` | le risposte delle fonti, così un giro nuovo non chiede di nuovo |
+| `.scrape_cache/` | le risposte delle fonti, così un giro nuovo non chiede di nuovo; i giochi non trovati (`notfound_<sistema>.tsv`) e quello che lo scraper ha letto delle `.mra` (`mra_info.tsv`) |
 | `.cache/scrape.log` | l'output dell'ultimo giro |
 
 ## 6. Da un terminale
@@ -114,6 +136,7 @@ Lo stesso scraper si lancia anche da SSH, con più opzioni (`--help`):
 python3 /media/fat/frontier/scraper/fe_scrape.py --arcade
 python3 /media/fat/frontier/scraper/fe_scrape.py --system NES --system SNES --video
 python3 /media/fat/frontier/scraper/fe_scrape.py --all-systems --lang it
+python3 /media/fat/frontier/scraper/fe_scrape.py --arcade --game "Bomb Jack"
 ```
 
 Da un PC con la SD montata: aggiungi `--root /percorso/della/sd`.

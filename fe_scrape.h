@@ -21,6 +21,8 @@ struct fe_scrape_state
 	int n = 0, total = 0;    // games of the system
 	int done = 0;            // systems finished
 	int systems = 0;         // systems to do
+	int updated = -1;        // games with new data or pictures in this run (-1: not written)
+	int notfound = 0;        // games no source has (skipped or tried in vain)
 };
 
 // fe_dir = absolute path of the frontier folder

@@ -186,6 +186,7 @@ static int versions_pending = 0;           // the index of the alternatives is b
 #define FE_DEL_LIST "@dellist"  // entry of a list: it is removed (A twice if it has games)
 #define FE_REN_LIST "@renlist"  // entry of a list: a new name typed on a keyboard
 #define FE_REM_LIST "@remlist"  // entry of the detail view of a game of a list: out of it
+#define FE_SCR_GAME "@scrapegame" // entry of the detail view: the scraper for this game only
 #define FE_TYPED_LIST "@typedlist" // entry of "@lists/new": the name typed on a keyboard
 #define FE_MAKE_LIST "@makelist" // entry of the filter: a new list with its games
 #define FE_CLEAR_FILTER "@clearfilter" // entry of the filter: nothing chosen
@@ -244,7 +245,7 @@ static std::vector<std::string> scr_systems; // scrape_systems=: games/ folders 
 static std::string scr_lang = "en";         // scrape_lang=
 static int scr_text = 1;                    // scrape_text=0: no data, only pictures and videos
 static std::vector<std::string> scr_media;  // scrape_media=box,snap,...
-static int scr_redo = 0;                    // scrape_redo=: 0 only what is missing, 1 the texts again, 2 everything again
+static int scr_redo = 0;                    // scrape_redo=: 0 only what is missing, 1 the texts again, 2 everything again, 3 also the games not found lately
 static const char *scr_langs[][2] = {
 	{ "en", "English" }, { "it", "Italian" }, { "fr", "French" }, { "de", "German" },
 	{ "es", "Spanish" }, { "pt", "Portuguese" }, { "ja", "Japanese" }
@@ -253,7 +254,7 @@ static const char *scr_media_names[][2] = {
 	{ "box", "Box art" }, { "snap", "Screenshots" }, { "title", "Title screens" },
 	{ "marquee", "Marquees and logos" }, { "fanart", "Fanart (large backgrounds)" }, { "video", "Videos" }
 };
-static const char *scr_redo_names[] = { "skip", "texts again", "all again" };
+static const char *scr_redo_names[] = { "skip", "texts again", "all again", "retry not found" };
 // typed on a keyboard: 1 ScreenScraper user, 2 its password, 3 a new name of a list,
 // 4 the name of a new list with the games of the filter
 static int editing = 0;
@@ -319,6 +320,12 @@ static int is_list_action(const std::string &name)
 		name == FE_CLEAR_FILTER ||
 		(starts_with(name, FE_LISTS "/v/") && name.find('/', strlen(FE_LISTS "/v/")) != std::string::npos) ||
 		starts_with(name, FE_LISTS_ADD "/");
+}
+
+// entries of the detail view that are not versions of the game
+static int is_detail_action(const std::string &name)
+{
+	return name == FE_ADD_LIST || name == FE_REM_LIST || name == FE_SCR_GAME;
 }
 
 // lists whose entries are named by their key: the favorites, the recent games, My Lists,
@@ -475,13 +482,20 @@ static int count_in(const std::vector<std::string> &list, const std::string &cat
 	return n;
 }
 
+// what the last run brought: "3 updated", "nothing new", "" (an older scraper)
+static std::string scrape_result(const fe_scrape_state &s)
+{
+	if (s.updated < 0) return "";
+	return s.updated ? std::to_string(s.updated) + " updated" : std::string("nothing new");
+}
+
 // "SNES 120/840 (2/5)" while the scraper runs, or how the last run ended
 static std::string scrape_progress()
 {
 	const fe_scrape_state &s = fe_scrape_get();
 	if (!s.running)
 	{
-		if (s.state == "done") return "finished";
+		if (s.state == "done") return scrape_result(s).empty() ? "finished" : "finished: " + scrape_result(s);
 		if (s.state == "stopped") return "stopped";
 		if (s.state == "error") return "error";
 		return "";
@@ -492,6 +506,8 @@ static std::string scrape_progress()
 	std::string text;
 	if (s.step == "index") text = "making the index";
 	else if (s.step == "system") text = name + ": data of the system";
+	else if (s.step == "check") text = name + ": checking what is missing";
+	else if (s.step == "adb") text = name + ": asking ArcadeDB";
 	else if (s.step == "scrape" && s.total) text = name + " " + std::to_string(s.n) + "/" + std::to_string(s.total);
 	else if (!name.empty()) text = name + ": reading the games";
 	else text = "starting";
@@ -1598,7 +1614,9 @@ static void fill_view(fe_view &v)
 		v.vars["pos"] = str;
 		snprintf(str, sizeof(str), "%d", vc);
 		v.vars["count"] = str;
-		int alts = vc - 1 - (!picking && vc && (versions.back().name == FE_ADD_LIST || versions.back().name == FE_REM_LIST)); // not "Add to list..."
+		int alts = vc - 1;
+		if (!picking)
+			for (auto &e : versions) alts -= is_detail_action(e.name); // not "Add to list...", "Scrape this game"
 		snprintf(str, sizeof(str), "%d", alts);
 		v.vars["alternatives"] = (alts > 0 && !picking) ? str : "";
 		v.vars["version"] = (vsel < vc) ? versions[vsel].label : "";
@@ -1713,7 +1731,7 @@ static void load_theme()
 	scr_lang = ini.count("scrape_lang") && !ini["scrape_lang"].empty() ? ini["scrape_lang"] : std::string("en");
 	scr_text = ini.count("scrape_text") ? atoi(ini["scrape_text"].c_str()) : 1;
 	scr_media = split_list(ini.count("scrape_media") ? ini["scrape_media"] : std::string("box,snap,title,marquee,video"));
-	scr_redo = std::max(0, std::min(2, ini.count("scrape_redo") ? atoi(ini["scrape_redo"].c_str()) : 0));
+	scr_redo = std::max(0, std::min(3, ini.count("scrape_redo") ? atoi(ini["scrape_redo"].c_str()) : 0));
 
 	// renderers: 0/1 list, 2/3 detail view (detail.ini), 4/5 screensaver
 	// (screensaver.ini), the last two from the simple theme if the theme hasn't
@@ -2471,6 +2489,77 @@ static std::string system_label(const std::string &system)
 
 // the scraper with the choices of the settings, in the background; sysinfo: only the
 // data of the systems (Wikipedia: description, maker, year, hardware), in a few minutes
+// what to download, from Frontier Settings -> Scraper; 0 (and a message) if nothing
+static int scrape_content(std::vector<std::string> &args)
+{
+	if (!scr_text && scr_media.empty())
+	{
+		notice("Scraper: nothing to download (texts and media OFF)", 3000);
+		return 0;
+	}
+	args.push_back("--lang");
+	args.push_back(scr_lang);
+	if (!scr_text) args.push_back("--no-text");
+	args.push_back("--media");
+	args.push_back(scr_media.empty() ? std::string("none") : join_list(scr_media));
+	return 1;
+}
+
+// the system of a game for the scraper (--arcade or --system <folder>) and its names
+// (the file names Frontier looks for its pictures with); 0 if it has none
+static int scrape_target(const fe_entry &e, std::vector<std::string> &args)
+{
+	std::string sys, key;
+	media_key(e, sys, key);
+	if (key.empty()) return 0;
+	if (sys == "arcade")
+	{
+		if (!arcade_there()) return 0;
+		args.push_back("--arcade");
+	}
+	else
+	{
+		const fe_games_folder *f = 0;
+		for (auto &g : fe_games_folders())
+			if (!strcasecmp(g.dir.c_str(), sys.c_str())) f = &g;
+		if (!f) return 0;
+		args.push_back("--system");
+		args.push_back(f->dir);
+	}
+	size_t a = 0;
+	while (a <= key.size())
+	{
+		size_t b = key.find('\n', a);
+		if (b == std::string::npos) b = key.size();
+		if (b > a)
+		{
+			args.push_back("--game");
+			args.push_back(key.substr(a, b - a));
+		}
+		a = b + 1;
+	}
+	return 1;
+}
+
+// "Scrape this game" in the detail view: its data and pictures again, with the
+// content chosen in Frontier Settings -> Scraper
+static void scrape_game()
+{
+	if (fe_scrape_get().running)
+	{
+		notice("Scraper: already running (Stop scraping first)", 3000);
+		return;
+	}
+	std::vector<std::string> args;
+	if (!scrape_target(detail_entry, args) || !scrape_content(args)) return;
+	if (!fe_scrape_start(args))
+	{
+		notice("Scraper: it can not start (python3, frontier/scraper)", 4000);
+		return;
+	}
+	notice("Scraping " + detail_entry.label + "...", 3000);
+}
+
 static void scrape_start(int sysinfo = 0)
 {
 	std::vector<std::string> args;
@@ -2498,18 +2587,10 @@ static void scrape_start(int sysinfo = 0)
 		notice("Scraper: choose the systems first (Systems)", 3000);
 		return;
 	}
-	if (!sysinfo && !scr_text && scr_media.empty())
-	{
-		notice("Scraper: nothing to download (texts and media OFF)", 3000);
-		return;
-	}
-	args.push_back("--lang");
-	args.push_back(scr_lang);
-	if (!scr_text) args.push_back("--no-text");
-	args.push_back("--media");
-	args.push_back(scr_media.empty() ? std::string("none") : join_list(scr_media));
+	if (!sysinfo && !scrape_content(args)) return;
 	if (scr_redo == 1) args.push_back("--refresh-data");
 	if (scr_redo == 2) args.push_back("--force");
+	if (scr_redo == 3) args.push_back("--retry-missing");
 
 	if (!fe_scrape_start(args))
 	{
@@ -2699,7 +2780,7 @@ static int scrape_setting(const std::string &name, int step)
 	}
 	else if (name == FE_SCR_REDO)
 	{
-		scr_redo = (scr_redo + (step < 0 ? 2 : 1)) % 3;
+		scr_redo = (scr_redo + (step < 0 ? 3 : 1)) % 4;
 		ini_key("scrape_redo", std::to_string(scr_redo));
 	}
 	else if (name == FE_SCR_RUN)
@@ -2908,6 +2989,14 @@ static void load_versions()
 	e.dir = 0;
 	versions.push_back(e);
 	version_paths.push_back(version_paths.empty() ? detail_path : version_paths[0]); // the media of the game
+	std::vector<std::string> args;
+	if (scrape_target(detail_entry, args))
+	{
+		e.name = FE_SCR_GAME;
+		e.label = "Scrape this game";
+		versions.push_back(e);
+		version_paths.push_back(version_paths.back());
+	}
 }
 
 // "Add to list...": the lists, "in list" on the right of those with the game, and
@@ -2950,7 +3039,8 @@ static void picker_close()
 {
 	picking = 0;
 	load_versions();
-	vsel = versions.size() - 1;
+	vsel = 0;
+	while (vsel < (int)versions.size() - 1 && versions[vsel].name != FE_ADD_LIST) vsel++;
 	dirty = 1;
 }
 
@@ -3644,6 +3734,7 @@ static fe_action poll(uint32_t key, int menu)
 				}
 				detail_close();
 			}
+			else if (vsel < vc && versions[vsel].name == FE_SCR_GAME) scrape_game();
 			else if (vsel < vc)
 			{
 				fe_action a = launch(version_paths[vsel], versions[vsel].label, remember_of(detail_key), detail_entry.label);
@@ -3960,7 +4051,13 @@ static fe_action poll(uint32_t key, int menu)
 	if (scr_end)
 	{
 		fe_lists_reset(); // the index of "My Lists" was made again
-		if (scr.state == "done") notice("Scraper finished", 4000);
+		if (scr.state == "done")
+		{
+			std::string r = scrape_result(scr);
+			if (scr.updated > 0) r = std::to_string(scr.updated) + (scr.updated == 1 ? " game" : " games") + " with new data or pictures";
+			if (scr.notfound > 0) r += (r.empty() ? "" : ", ") + std::to_string(scr.notfound) + " not found";
+			notice(r.empty() ? "Scraper finished" : "Scraper finished: " + r, 5000);
+		}
 		else if (scr.state == "error") notice("Scraper error: see frontier/.cache/scrape.log", 6000);
 		else notice("Scraper stopped", 3000);
 	}
