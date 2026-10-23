@@ -20,6 +20,19 @@ themeable graphical front end drawn on the framebuffer. Everything else
   Frontier's, update_all also updates Frontier, and one script brings the
   official firmware back.
 
+## Screenshots
+
+Taken on a real MiSTer with the `citypop_blue` theme.
+
+<table>
+<tr><td align="center"><img src="docs/screenshots/01-main.png" width="100%"><br><sub>Main screen: categories, Favorites, Recent, My Lists and the settings</sub></td><td align="center"><img src="docs/screenshots/02-consoles.png" width="100%"><br><sub>Consoles, with the data of each system taken from Wikipedia</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/03-snes-list.png" width="100%"><br><sub>A system's games, by title, with the video of the highlighted one</sub></td><td align="center"><img src="docs/screenshots/04-snes-details.png" width="100%"><br><sub>Details (X): description, metadata and every version and region</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/05-arcade-list.png" width="100%"><br><sub>Arcade: games by title, grouped by MAME set</sub></td><td align="center"><img src="docs/screenshots/06-arcade-details.png" width="100%"><br><sub>Arcade details with the available versions</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/07-favorites.png" width="100%"><br><sub>Favorites, per system or in a single list (hold X on a game)</sub></td><td align="center"><img src="docs/screenshots/08-my-lists.png" width="100%"><br><sub>My Lists: your own lists, by hand or from a filter</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/09-list-shmup.png" width="100%"><br><sub>A list with games from several systems (here, shoot'em ups)</sub></td><td align="center"><img src="docs/screenshots/10-settings.png" width="100%"><br><sub>Frontier Settings: scraper, screensaver, themes, visible systems, Coin-Op</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/11-loading.png" width="100%"><br><sub>Loading screen drawn by the theme (here Garou, Neo Geo; 4:3 on a CRT)</sub></td></tr>
+</table>
+
 ## Install
 
 Either way, the scripts are in the MiSTer menu: F12 -> Scripts.
@@ -209,6 +222,8 @@ official `menu.rbf` stays in the root of the SD card and keeps updating.
 To **[pierinolartista](https://www.twitch.tv/pierinolartista)**, the best
 beta tester in the world, able to break any software, even the most stable
 one. Every bug found there made Frontier better.
+
+To **Dedaloso**, for the City Pop theme.
 
 ## License
 
