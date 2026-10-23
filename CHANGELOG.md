@@ -5,9 +5,9 @@ Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/relea
 a release is its entry here.
 
 ## v2026.10.23c
-* **Fix: `frontier_install` stopped with "Custom base_system_path"** on the `downloader.ini` written by
-  recent update_all versions (`base_system_path = '/media/fat/'`, with the slash at the end): Frontier
-  was not installed and the MiSTer stayed on the official menu. The path is now read as `/media/fat`;
+* **Fix: `frontier_install` stopped with "Custom base_system_path"** on older `downloader.ini` files
+  (the example of Downloader up to 1.5, still found on many SD cards: `base_system_path = '/media/fat/'`,
+  with the slash at the end): Frontier was not installed and the MiSTer stayed on the official menu. The path is now read as `/media/fat`;
   a really different path is still refused. `frontier_uninstall` stopped with the same error.
 * The program (`MiSTer`, `menu.rbf`, `fe_av.so`) is the same as in `v2026.10.23b`.
 
