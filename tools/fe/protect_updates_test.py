@@ -146,6 +146,15 @@ class ProtectionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             protect.protect_ini(b'[MiSTer]\nbase_system_path=/media/other\n')
         with self.assertRaises(ValueError):
+            protect.protect_ini(b'[MiSTer]\nbase_system_path=/media/other/\n')
+
+    def test_default_paths_written_by_update_all_are_accepted(self):
+        ini = (b"[MiSTer]\nbase_path = '/media/fat/'\nbase_system_path = '/media/fat/'\n\n"
+               b"[distribution_mister]\ndb_url = https://example.invalid/db.json.zip\n")
+        self.assertIn(b'filter = [MiSTer] !misterfirmware', protect.protect_ini(ini))
+        disabled = protect.protect_ini(protect.protect_ini(ini), disable=True)
+        self.assertNotIn(b'misterfirmware', disabled)
+        with self.assertRaises(ValueError):
             protect.protect_store(b'{"dbs":{"distribution_mister":{"files":[]}}}', False)
 
     def test_updater_process_detection_ignores_archive_arguments_to_other_scripts(self):

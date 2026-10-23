@@ -4,6 +4,13 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## v2026.10.23c
+* **Fix: `frontier_install` stopped with "Custom base_system_path"** on the `downloader.ini` written by
+  recent update_all versions (`base_system_path = '/media/fat/'`, with the slash at the end): Frontier
+  was not installed and the MiSTer stayed on the official menu. The path is now read as `/media/fat`;
+  a really different path is still refused. `frontier_uninstall` stopped with the same error.
+* The program (`MiSTer`, `menu.rbf`, `fe_av.so`) is the same as in `v2026.10.23b`.
+
 ## v2026.10.23b
 * **Faster scraper**, above all for arcade games: the `.mra` files are read once and kept in a
   cache, ArcadeDB is asked only for the games to do (in a few batches), the gamelist is written in

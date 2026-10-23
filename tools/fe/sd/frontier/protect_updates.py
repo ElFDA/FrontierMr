@@ -52,7 +52,8 @@ def protect_ini(data, root=Path('/media/fat'), disable=False):
     for section in parser.sections():
         if section.lower() == 'mister':
             system_path = parser.get(section, 'base_system_path', fallback='/media/fat').strip().strip('\"\'')
-            if system_path not in ('/media/fat', str(root)):
+            # update_all writes '/media/fat/' (trailing slash)
+            if os.path.normpath(system_path) not in ('/media/fat', str(root)):
                 raise ValueError('Custom base_system_path: review its Downloader store separately.')
     sections = [s for s in parser.sections() if s.lower() == 'distribution_mister']
     if len(sections) > 1:
