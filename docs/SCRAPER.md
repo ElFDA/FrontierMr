@@ -77,6 +77,15 @@ MAME set: "Street Fighter II (USA 910522)" from "Street Fighter II (World
 910522)"), keeping their own name. Nothing is downloaded or copied for them;
 only an alternative without a main game is scraped on its own.
 
+**Versions of a core.** The same goes for the `.mra` outside `_alternatives` which
+are versions of one game, as the regions of a core (`_Decoryah/_HeavyUnit`: World,
+Japan, US...): they use the same MAME set (the setname of one is the setname,
+parent or zip of the other, or they have the same parent) and a similar title
+("Jackal", "Tokushu Butai Jackal"). One of them is scraped, the others take its
+data and pictures keeping their own name. The BIOS zips shared by many games, and
+the clones with another title (Space Invaders / Balloon Bomber, Pac-Man / Ms.
+Pac-Man), do not join. On the test MiSTer 443 of 2784 games were not asked any more.
+
 The new pictures of a system appear when that system is finished; to see
 them at once on a system already open, hold X on it (or press F5).
 

@@ -481,6 +481,11 @@ SCRAPER (dati e immagini)
   910522)" da "Street Fighter II (World 910522)") e tiene il suo nome:
   nessuna richiesta e nessun file copiato. Solo un'alternativa senza gioco
   principale (o con un principale senza niente) si scarica per conto suo.
+  Lo stesso per le .mra fuori da _alternatives che sono versioni di un solo
+  gioco (le regioni di un core, es. _Decoryah/_HeavyUnit: World, Japan, US):
+  stesso set MAME e titolo simile, una si scarica e le altre prendono i suoi
+  dati e le sue immagini; gli zip dei BIOS e i cloni con un altro titolo (Space
+  Invaders / Balloon Bomber) non si uniscono.
   Le .mra si leggono una volta e restano in .scrape_cache/mra_info.tsv
   (rilette quando cambiano).
   I messaggi dello scraper sono in inglese.
@@ -686,7 +691,10 @@ GIOCHI ARCADE NUOVI
   tutto quello che c'e' gia' sulla scheda e' considerato noto e "#Newest" e'
   vuota; da allora un gioco che non c'era all'avvio precedente di Frontier (o
   alla visita precedente di "#Newest", o a F5) e' nuovo. Resta per newest=30
-  giorni in frontier.ini (0 = niente "#Newest"). Cancellando arcade_seen.txt
+  giorni in frontier.ini (0 = niente "#Newest"). I .mra nuovi dello stesso gioco
+  (versioni e regioni di un core: Heavy Unit World / Japan / US, o lo stesso gioco
+  da due core) sono una voce sola, come nella cartella Arcade: gli altri sono le
+  versioni del dettaglio. Cancellando arcade_seen.txt
   si riparte da adesso. Serve l'orologio del MiSTer a posto (internet almeno
   una volta): il MiSTer non ha un orologio suo, quindi nei primi secondi dopo
   l'accensione "#Newest" mostra quello che e' gia' noto e i giochi nuovi

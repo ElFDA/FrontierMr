@@ -2973,6 +2973,20 @@ static void game_versions()
 			versions.push_back(e);
 			version_paths.push_back(a.path);
 		}
+		// "#Newest": the new .mra of the same game are its versions
+		if (cur_dir == FE_NEWEST)
+		{
+			for (auto &o : fe_newest_versions(detail_path))
+			{
+				fe_entry e;
+				e.name = o;
+				e.label = o.substr(o.rfind('/') + 1);
+				e.label.erase(e.label.size() - 4); // ".mra"
+				e.dir = 0;
+				versions.push_back(e);
+				version_paths.push_back(o);
+			}
+		}
 	}
 	versions_gen++;
 }

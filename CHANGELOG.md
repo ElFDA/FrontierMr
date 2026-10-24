@@ -4,6 +4,18 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## v2026.10.24b
+* **"#Newest" groups the versions of a game.** The new `.mra` which use the same romset (the
+  regions and revisions of a core, or the same game from two cores) are one entry, as in the Arcade
+  folder, and the others are the versions of the detail view: 219 new files were 189 games on the
+  test MiSTer. Clones with another title (Space Invaders / Balloon Bomber, Pac-Man / Ms. Pac-Man)
+  stay separate games.
+* **Faster arcade scraper**: the `.mra` outside `_alternatives` which are versions of one game (the
+  regions of a core, such as Heavy Unit World / Japan / US) are scraped once, the others take its data
+  and pictures like the alternatives do (443 of 2784 games on the test MiSTer, no BIOS or other-title
+  clone joins).
+* Only `MiSTer` changes (and the scraper script); `menu.rbf` and `fe_av.so` are the same as in `v2026.10.24`.
+
 ## v2026.10.24
 * **Fix: "#Newest" (Arcade folder) was empty just after the power on.** The MiSTer has no clock of its
   own: until the network sets it (20-30 seconds after the start) the date is 1970, and Frontier gave up

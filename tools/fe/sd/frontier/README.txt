@@ -461,7 +461,11 @@ SCRAPER (game data and pictures)
   same MAME set, e.g. "Street Fighter II (USA 910522)" from "Street Fighter
   II (World 910522)"), keeping its own name: no request and no file copied.
   Only an alternative without a main game (or whose main game has nothing)
-  is scraped on its own. The .mra files are read once and kept in
+  is scraped on its own. The same for the .mra outside _alternatives which are
+  versions of one game (the regions of a core, e.g. _Decoryah/_HeavyUnit: World,
+  Japan, US): same MAME set and a similar title, one is scraped and the others
+  take its data and pictures; BIOS zips and clones with another title (Space
+  Invaders / Balloon Bomber) do not join. The .mra files are read once and kept in
   .scrape_cache/mra_info.tsv (read again when they change).
 
 VIDEOS
@@ -655,7 +659,10 @@ NEWEST ARCADE GAMES
   already on the card counts as known and "#Newest" is empty; from then on a
   game which was not there at the previous start of Frontier (or the previous
   visit to "#Newest", or F5) is new. It stays for newest=30 days in
-  frontier.ini (0 = no "#Newest"). Delete arcade_seen.txt to start again from
+  frontier.ini (0 = no "#Newest"). The new .mra of the same game (the versions
+  and regions of a core: Heavy Unit World / Japan / US, or the same game from two
+  cores) are one entry, as in the Arcade folder: the other ones are the versions
+  of the detail view. Delete arcade_seen.txt to start again from
   now. Needs the clock of the MiSTer to be set (internet at least once): the
   MiSTer has no clock of its own, so for the first seconds after the power on
   "#Newest" shows what is already known and new games get their day later

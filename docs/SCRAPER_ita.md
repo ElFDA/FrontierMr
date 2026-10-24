@@ -79,6 +79,16 @@ dati e le immagini del loro gioco principale (la `.mra` fuori da
 scarica né si copia niente; solo un'alternativa senza gioco principale viene
 scaricata per conto suo.
 
+**Versioni di un core.** Lo stesso vale per le `.mra` fuori da `_alternatives`
+che sono versioni di un solo gioco, come le regioni di un core
+(`_Decoryah/_HeavyUnit`: World, Japan, US...): usano lo stesso set MAME (il
+setname di una è setname, parent o zip dell'altra, oppure hanno lo stesso
+parent) e hanno un titolo simile ("Jackal", "Tokushu Butai Jackal"). Se ne
+scarica una, le altre prendono i suoi dati e le sue immagini tenendo il loro
+nome. Non si uniscono gli zip dei BIOS condivisi da molti giochi né i cloni con
+un altro titolo (Space Invaders / Balloon Bomber, Pac-Man / Ms. Pac-Man). Sul
+MiSTer di prova 443 giochi su 2784 non si chiedono più.
+
 Le immagini nuove di un sistema compaiono quando quel sistema è finito; per
 vederle subito su un sistema già aperto tieni premuto X su di esso (o F5).
 

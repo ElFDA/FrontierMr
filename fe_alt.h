@@ -32,4 +32,8 @@ int fe_alt_count();
 // returns 0 while the index is being built (call again later)
 int fe_alt_versions(const std::string &mra, std::vector<fe_version> &out);
 
+// setname, parent and the names of the zip files of an .mra (full path), lowercase, as the
+// index uses them (for the games grouped in "#Newest", see fe_newest.h)
+void fe_alt_mra_keys(const std::string &path, std::string &setname, std::string &parent, std::vector<std::string> &keys);
+
 #endif

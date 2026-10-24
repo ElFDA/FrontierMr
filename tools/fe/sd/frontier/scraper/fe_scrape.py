@@ -268,7 +268,8 @@ class Game:
         self.ids = None       # (ScreenScraper id, libretro name)
         self.getcrc = None
         self.alt = False      # .mra of _Arcade/_alternatives
-        self.main = None      # key of the main .mra of an alternative (list_arcade)
+        self.main = None      # key of the main .mra of an alternative or of another version (list_arcade)
+        self.parent = ''      # <parent> of an .mra
         self.keys = []
 
 
@@ -400,12 +401,92 @@ def list_arcade(root, cache):
             g.ids = ARCADE
             g.alt = alt
             g.keys = info.get('keys', [])
+            g.parent = (info.get('parent') or '').lower()
             g.altdir = os.path.basename(d).lstrip('_').lower() if alt else ''
             games[key] = g
     mc.save(prune=True)
     out = list(games.values())
     main_of(out)
+    group_versions(out)
     return out
+
+
+def title_words(title):
+    """the words of a title without the parts in () and []: "Heavy Unit (World)" -> heavy unit"""
+    return re.findall(r"[a-z0-9']+", re.sub(r'\([^)]*\)|\[[^\]]*\]', ' ', title.lower()))
+
+
+def same_title(a, b):
+    """one title starts or ends with the other ("Jackal" / "Tokushu Butai Jackal"): clones of a
+    romset can be other games (Space Invaders / Balloon Bomber, Pac-Man / Ms. Pac-Man)"""
+    a, b = title_words(a), title_words(b)
+    if not a or not b:
+        return False
+    if len(a) > len(b):
+        a, b = b, a
+    return b[:len(a)] == a or b[-len(a):] == a
+
+
+def group_versions(games):
+    """the .mra outside _alternatives of the same game (the regions and revisions of a core:
+    Heavy Unit World / Japan / US in _Decoryah/_HeavyUnit) are one game for the scraper: the
+    main one (the setname the others use, then the shortest title) is scraped, the others take
+    from it as the alternatives do (g.main). Same romset as fe_newest.cpp: the setname of one is the
+    setname, parent or zip of the other, or they have the same parent; the others must have a
+    title like the main one (same_title)"""
+    mains = [g for g in games if not g.alt and not g.main and 'bios' not in g.title.lower()]
+    by_set = {}
+    uses = {}  # zip names which are not the setname or the parent: used by how many .mra
+    for g in mains:
+        if g.setname:
+            by_set.setdefault(g.setname.lower(), []).append(g)
+        for k in g.keys:
+            if k != (g.setname or '').lower() and k != g.parent:
+                uses[k] = uses.get(k, 0) + 1
+    root = {g.key: g.key for g in mains}
+
+    def find(k):
+        while root[k] != k:
+            root[k] = root[root[k]]
+            k = root[k]
+        return k
+
+    def join(a, b):
+        root[find(a.key)] = find(b.key)
+
+    by_parent = {}
+    for g in mains:
+        # its parent is the setname of another; a zip of the other game counts unless many
+        # .mra use it (the BIOS: pgm, playch10, neogeo)
+        for k in g.keys:
+            if k != g.parent and uses.get(k, 0) > 3:
+                continue
+            for h in by_set.get(k, []):
+                join(g, h)
+        if g.parent:
+            if g.parent in by_parent:
+                join(g, by_parent[g.parent])
+            else:
+                by_parent[g.parent] = g
+    groups = {}
+    for g in mains:
+        groups.setdefault(find(g.key), []).append(g)
+    moved = {}
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+
+        def score(g):
+            s = (g.setname or '').lower()
+            return (-sum(1 for h in members if h is not g and s and s in h.keys), len(g.title), g.key.lower())
+        best = min(members, key=score)
+        for g in members:
+            if g is not best and same_title(g.key, best.key):
+                g.main = best.key
+                moved[g.key] = best.key
+    for g in games:  # an alternative of a game which now takes from another
+        if g.main in moved:
+            g.main = moved[g.main]
 
 
 def main_of(games):

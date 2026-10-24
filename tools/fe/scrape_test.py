@@ -134,6 +134,27 @@ class ScrapeTests(unittest.TestCase):
         self.assertEqual('Lonely', e['Lonely (Bootleg)']['name'])
         self.assertTrue(self.net.asked('romnom=lonely.zip'))
 
+    def test_versions_of_a_core_are_one_game(self):
+        # Heavy Unit style: the versions of a core are not in _alternatives
+        self.add('_Core/_Group/Group Game (World)', 'grp', ['grp'])
+        self.add('_Core/_Group/Group Game (Japan)', 'grpj', ['grpj', 'grp'])
+        self.add('_Core/_Group/Group Game (US)', 'grpu', ['grpu', 'grp'])
+        self.add('_alternatives/_Group Game/Group Game (Bootleg)', 'grpb', ['grpb', 'grpj'])
+        self.net.ss['grp'] = 'The Group Game'
+        F = self.run_scraper()
+        games = {g.key: g for g in F.list_arcade(str(self.root), str(self.root / 'frontier/.scrape_cache'))}
+        self.assertIsNone(games['Group Game (World)'].main)
+        self.assertEqual('Group Game (World)', games['Group Game (Japan)'].main)
+        self.assertEqual('Group Game (World)', games['Group Game (US)'].main)
+        self.assertEqual('Group Game (World)', games['Group Game (Bootleg)'].main)  # through Japan
+        self.assertIsNone(games['Main Game'].main)
+        self.assertIsNone(games['Neo 0'].main)
+        e = self.gamelist()
+        self.assertEqual('Group Game (US)', e['Group Game (US)']['name'])
+        self.assertEqual('About The Group Game', e['Group Game (US)']['desc'])
+        self.assertEqual([], self.net.asked('grpu.zip'))
+        self.assertEqual([], self.net.asked('grpj.zip'))
+
     def test_bios_zip_does_not_join(self):
         F = self.run_scraper()
         games = {g.key: g for g in F.list_arcade(str(self.root), str(self.root / 'frontier/.scrape_cache'))}

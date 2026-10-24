@@ -70,7 +70,7 @@ static void add_key(std::vector<std::string> &keys, std::string k)
 }
 
 // setname, parent and the names of the zip files of an .mra
-static std::vector<std::string> mra_keys(const std::string &path, std::string *setname = 0)
+static std::vector<std::string> mra_keys(const std::string &path, std::string *setname = 0, std::string *parent_out = 0)
 {
 	std::vector<std::string> keys;
 	FILE *fp = fopen(path.c_str(), "rb");
@@ -83,8 +83,10 @@ static std::vector<std::string> mra_keys(const std::string &path, std::string *s
 
 	std::string set = tag_value(t, "setname");
 	if (setname) *setname = set;
+	std::string parent = tag_value(t, "parent");
+	if (parent_out) *parent_out = parent;
 	add_key(keys, set);
-	add_key(keys, tag_value(t, "parent"));
+	add_key(keys, parent);
 
 	size_t pos = 0;
 	while ((pos = t.find("zip=\"", pos)) != std::string::npos)
@@ -290,6 +292,13 @@ int fe_alt_count()
 	int n = files.size();
 	pthread_mutex_unlock(&mtx);
 	return n;
+}
+
+void fe_alt_mra_keys(const std::string &path, std::string &setname, std::string &parent, std::vector<std::string> &keys)
+{
+	setname.clear();
+	parent.clear();
+	keys = mra_keys(path, &setname, &parent);
 }
 
 int fe_alt_versions(const std::string &mra, std::vector<fe_version> &out)
