@@ -688,7 +688,9 @@ GIOCHI ARCADE NUOVI
   alla visita precedente di "#Newest", o a F5) e' nuovo. Resta per newest=30
   giorni in frontier.ini (0 = niente "#Newest"). Cancellando arcade_seen.txt
   si riparte da adesso. Serve l'orologio del MiSTer a posto (internet almeno
-  una volta).
+  una volta): il MiSTer non ha un orologio suo, quindi nei primi secondi dopo
+  l'accensione "#Newest" mostra quello che e' gia' noto e i giochi nuovi
+  prendono il giorno dopo (riapri "#Newest" o premi F5).
 
 TEMI
   Il tema si cambia da Frontier Settings -> Themes -> "Theme" (A), oppure con

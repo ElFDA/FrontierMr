@@ -82,8 +82,10 @@ static void write_file(const std::string &file)
 
 void fe_newest_scan(const std::string &root, const std::string &file)
 {
+	// the clock isn't set for the first seconds after the power on (no RTC): what is known
+	// is read all the same, only the new games wait to be told the day
 	time_t now = time(0);
-	if (now < FE_NEW_CLOCK_OK) return;
+	int clock_ok = now >= FE_NEW_CLOCK_OK;
 
 	present.clear();
 	walk(root, "_Arcade", 0);
@@ -92,12 +94,14 @@ void fe_newest_scan(const std::string &root, const std::string &file)
 	int first = access(file.c_str(), F_OK) != 0;
 	if (!first) read_file(file);
 	else seen_map.clear();
+	if (first && !clock_ok) return; // the baseline waits for the clock too
 
 	int changed = first;
 	for (auto &p : present)
 	{
 		auto it = seen_map.find(p.first);
 		if (it != seen_map.end()) continue;
+		if (!clock_ok) continue;
 		known k;
 		k.seen = first ? 0 : now;
 		k.mtime = p.second;
@@ -105,7 +109,7 @@ void fe_newest_scan(const std::string &root, const std::string &file)
 		changed = 1;
 	}
 	if (changed) write_file(file);
-	printf("frontier: newest: %d arcade games, %s\n", (int)present.size(), first ? "all known (first time)" : changed ? "new ones found" : "nothing new");
+	printf("frontier: newest: %d arcade games, %s\n", (int)present.size(), !clock_ok ? "clock not set, only the known ones" : first ? "all known (first time)" : changed ? "new ones found" : "nothing new");
 }
 
 std::vector<fe_new> fe_newest_list(int days)

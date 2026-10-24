@@ -4,6 +4,13 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## v2026.10.24
+* **Fix: "#Newest" (Arcade folder) was empty just after the power on.** The MiSTer has no clock of its
+  own: until the network sets it (20-30 seconds after the start) the date is 1970, and Frontier gave up
+  before reading the games it already knew, so the list showed nothing. Now it shows the known ones
+  at once; the new games get their day as soon as the clock is right (open "#Newest" again or press F5).
+* Only `MiSTer` changes; `menu.rbf` and `fe_av.so` are the same as in `v2026.10.23c`.
+
 ## v2026.10.23c
 * **Fix: `frontier_install` stopped with "Custom base_system_path"** on older `downloader.ini` files
   (the example of Downloader up to 1.5, still found on many SD cards: `base_system_path = '/media/fat/'`,

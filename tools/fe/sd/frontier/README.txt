@@ -656,7 +656,10 @@ NEWEST ARCADE GAMES
   game which was not there at the previous start of Frontier (or the previous
   visit to "#Newest", or F5) is new. It stays for newest=30 days in
   frontier.ini (0 = no "#Newest"). Delete arcade_seen.txt to start again from
-  now. Needs the clock of the MiSTer to be set (internet at least once).
+  now. Needs the clock of the MiSTer to be set (internet at least once): the
+  MiSTer has no clock of its own, so for the first seconds after the power on
+  "#Newest" shows what is already known and new games get their day later
+  (open "#Newest" again or press F5).
 
 THEMES
   Change the theme from Frontier Settings -> Themes -> "Theme" (A), or with
