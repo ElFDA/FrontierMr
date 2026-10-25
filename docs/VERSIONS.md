@@ -73,6 +73,17 @@ list of the system, where the real folders of `games/` are shown as they are
 prototypes, hacks...) are skipped by the list and by the scraper; other names
 can be added with `exclude_dirs=` in `frontier.ini`.
 
+## Cores with several configurations (Amiga)
+
+Amiga, Amiga 500, Amiga 500HD and Amiga 600HD are each a system of the Computer
+category, with its own `games/` folder (`games/Amiga500HD`...). The MGL of
+`_Computer` which starts the configuration is the first entry of the folder
+(`launchers=` in `systems.ini`), so a configuration which boots by itself, for
+example from a hard disk (`.hdf`), starts from Frontier too. The `.adf` files
+of the folder start with the same configuration. A `launchers=` path ending with `/` takes
+all the MGLs of that folder: the games of `_Computer/_X68000 Games` are in Sharp X68000. VIC-20: the `.rom` cartridges
+(Megacart, Ultimate...) start too.
+
 ## Arcade and Neo Geo
 
 * **Arcade**: every `.mra` of `_Arcade` is an entry, as in the original

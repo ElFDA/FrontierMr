@@ -333,6 +333,16 @@ GAMES BY SYSTEM
   When a version has no data of its own, Frontier shows those of another
   version of the same game.
 
+  Cores with several configurations (Amiga: Amiga, Amiga 500, Amiga 500HD,
+  Amiga 600HD): each one is a system of the Computer category, with its own
+  games/ folder (games/Amiga500HD...), and the MGL of _Computer which starts
+  it (systems.ini: launchers=_Computer/Amiga 500HD.mgl) is the first entry of
+  the folder: the configuration which boots by itself, e.g. from a hard disk
+  (.hdf), starts from there; the .adf files of the folder start with the same
+  configuration. A launchers= path ending with / takes all the MGLs of that
+  folder: the games of _Computer/_X68000 Games are in Sharp X68000.
+  VIC-20: the .rom cartridges (Megacart, Ultimate...) start too.
+
 SYSTEM DATA
   On a system (in Computer, Console, Handheld, Other, in Favorites and in My
   Lists) Frontier shows what it is: description, maker, year, type and the
@@ -467,6 +477,13 @@ SCRAPER (game data and pictures)
   take its data and pictures; BIOS zips and clones with another title (Space
   Invaders / Balloon Bomber) do not join. The .mra files are read once and kept in
   .scrape_cache/mra_info.tsv (read again when they change).
+  Copies from older runs: the arcade versions scraped one by one have their own
+  files, many identical to those of the main game (videos, marquees...). From
+  the PC or ssh: python3 fe_scrape.py --dedupe-media --dry-run says how much
+  space they take; without --dry-run it makes the versions use the files of the
+  main game (the gamelist is written first) and deletes the identical copies.
+  Different pictures stay. No network; it takes ~10 minutes on the MiSTer (it
+  compares the files). Then press F5 in Frontier.
 
 VIDEOS
   Frontier plays the mp4 videos the scraper downloads with --video

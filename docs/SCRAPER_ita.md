@@ -89,6 +89,14 @@ nome. Non si uniscono gli zip dei BIOS condivisi da molti giochi né i cloni con
 un altro titolo (Space Invaders / Balloon Bomber, Pac-Man / Ms. Pac-Man). Sul
 MiSTer di prova 443 giochi su 2784 non si chiedono più.
 
+**Copie di passate vecchie.** Le versioni scaricate una per una prima hanno file
+propri, molti identici a quelli del gioco principale. `python3 fe_scrape.py
+--dedupe-media --dry-run` (da PC o ssh) dice quanto spazio occupano; senza
+`--dry-run` le versioni usano i file del principale (prima si riscrive il
+gamelist) e le copie identiche si cancellano. Le immagini diverse restano.
+Niente rete, circa dieci minuti sul MiSTer. Sul MiSTer di prova: 7067 file,
+8,2 GB. Poi premi F5 in Frontier.
+
 Le immagini nuove di un sistema compaiono quando quel sistema è finito; per
 vederle subito su un sistema già aperto tieni premuto X su di esso (o F5).
 

@@ -33,6 +33,7 @@ struct sysdef
 	int same_dir = 0;
 	int romsets = 0;   // Neo Geo: zip files and folders are romsets (romsets.xml), loaded by the first slot
 	std::vector<std::string> folders;
+	std::vector<std::string> launchers; // MGLs of the root which start a configuration of the core by themselves
 	std::vector<slot> slots;
 };
 
@@ -199,6 +200,7 @@ void fe_games_load(const std::string &ini)
 		d.same_dir = s.get_int("setname_same_dir", 0);
 		d.romsets = s.get_int("romsets", 0);
 		d.folders = split(s.get("folders"), "|");
+		d.launchers = split(s.get("launchers"), "|");
 
 		for (int i = 1; i < 32; i++)
 		{
@@ -423,6 +425,36 @@ std::vector<std::string> fe_games_ext_list(const std::string &dir)
 				if (!e.empty() && std::find(list.begin(), list.end(), e) == list.end()) list.push_back(e);
 	if (fe_games_romsets(dir) && std::find(list.begin(), list.end(), "zip") == list.end()) list.push_back("zip");
 	return list;
+}
+
+std::vector<std::string> fe_games_launchers(const std::string &dir)
+{
+	std::vector<std::string> out;
+	for (auto s : systems_of(dir))
+	{
+		for (auto &l : s->launchers)
+		{
+			if (l.back() == '/')
+			{
+				// a folder: all its MGLs by name (_Computer/_X68000 Games/)
+				std::vector<std::string> names;
+				DIR *d = opendir((std::string(getRootDir()) + "/" + l).c_str());
+				if (!d) continue;
+				while (struct dirent *de = readdir(d))
+				{
+					size_t n = strlen(de->d_name);
+					if (de->d_name[0] != '.' && n > 4 && !strcasecmp(de->d_name + n - 4, ".mgl")) names.push_back(de->d_name);
+				}
+				closedir(d);
+				std::sort(names.begin(), names.end(), [](const std::string &a, const std::string &b) { return strcasecmp(a.c_str(), b.c_str()) < 0; });
+				for (auto &n : names) out.push_back(l + n);
+				continue;
+			}
+			struct stat st;
+			if (!stat((std::string(getRootDir()) + "/" + l).c_str(), &st) && std::find(out.begin(), out.end(), l) == out.end()) out.push_back(l);
+		}
+	}
+	return out;
 }
 
 int fe_games_romsets(const std::string &dir)

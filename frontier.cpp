@@ -175,6 +175,7 @@ static int versions_pending = 0;           // the index of the alternatives is b
 #define FE_MISTER "@mister"
 #define FE_SYS    "@sys/"
 #define FE_FOLDERS "@folders"   // entry of a @sys list: the real folders
+#define FE_MGL    "@mgl:"       // entry of the folder of a system: an MGL of the root (systems.ini launchers=)
 #define FE_ARCADE "_Arcade"
 #define FE_FAV    "@fav"
 #define FE_RECENT "@recent"
@@ -398,6 +399,23 @@ static void add_entry(const std::string &name, const std::string &label, int dir
 	e.label = label;
 	e.dir = dir;
 	entries.push_back(e);
+}
+
+// the launchers of a system (its configurations which start by themselves) first
+static void add_launchers(const std::string &folder, size_t at)
+{
+	std::vector<fe_entry> list;
+	for (auto &l : fe_games_launchers(folder))
+	{
+		fe_entry e;
+		e.name = FE_MGL + l;
+		size_t slash = l.rfind('/');
+		e.label = l.substr(slash == std::string::npos ? 0 : slash + 1);
+		if (e.label.size() > 4 && !strcasecmp(e.label.c_str() + e.label.size() - 4, ".mgl")) e.label.erase(e.label.size() - 4);
+		e.dir = 0;
+		list.push_back(e);
+	}
+	entries.insert(entries.begin() + std::min(at, entries.size()), list.begin(), list.end());
 }
 
 static int is_dir(const std::string &path)
@@ -658,6 +676,7 @@ static int load_dir(std::string dir, const char *select_name)
 		entries.clear();
 		add_entry("..", "..", 1);
 		add_entry(FE_FOLDERS, "Folders", 1);
+		add_launchers(folder, entries.size());
 		if (!s)
 		{
 			// first time: the thread of fe_group reads the folders (see frontier_poll)
@@ -992,6 +1011,10 @@ static int load_dir(std::string dir, const char *select_name)
 			entries.push_back(e);
 		}
 
+		// the configurations of the system which start by themselves, first in its folder
+		if (is_games_path(dir) && dir.find('/', 6) == std::string::npos)
+			add_launchers(dir.substr(6), (!entries.empty() && entries[0].name == "..") ? 1 : 0);
+
 		// "#Newest" first in the Arcade folder
 		if (newest_days && !in_mister && !strcasecmp(dir.c_str(), FE_ARCADE))
 		{
@@ -1156,6 +1179,7 @@ static std::string full_path(const fe_entry &e)
 	entry_place(e, dir, name);
 	if (name.empty()) return "";
 	if (name == FE_NEWEST) return name;
+	if (starts_with(name, FE_MGL)) return name.substr(strlen(FE_MGL));
 	if (is_sys_path(dir))
 	{
 		if (name == FE_FOLDERS) return "games/" + sys_folder(dir);

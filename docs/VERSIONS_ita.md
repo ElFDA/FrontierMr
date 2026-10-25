@@ -75,6 +75,18 @@ una cartella). Le cartelle chiamate `Extra` (giochi senza licenza, prototipi,
 hack...) vengono saltate dalla lista e dallo scraper; altri nomi si
 aggiungono con `exclude_dirs=` in `frontier.ini`.
 
+## Core con piu' configurazioni (Amiga)
+
+Amiga, Amiga 500, Amiga 500HD e Amiga 600HD sono ognuno un sistema della
+categoria Computer, con la sua cartella in `games/` (`games/Amiga500HD`...).
+L'MGL di `_Computer` che avvia la configurazione e' la prima voce della
+cartella (`launchers=` in `systems.ini`): cosi' una configurazione che parte
+da sola, per esempio da un hard disk (`.hdf`), parte anche da Frontier. I
+file `.adf` della cartella partono con la stessa configurazione. Un percorso di `launchers=`
+che finisce con `/` prende tutti gli MGL di quella cartella: i giochi di `_Computer/_X68000 Games`
+sono in Sharp X68000. VIC-20:
+partono anche le cartucce `.rom` (Megacart, Ultimate...).
+
 ## Arcade e Neo Geo
 
 * **Arcade**: ogni `.mra` di `_Arcade` è una voce, come nel browser

@@ -4,6 +4,27 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## v2026.10.25
+* **Fix: Amiga with a hard disk did not boot.** `MiSTer` is now built on the stable release 20261010
+  of Main_MiSTer (the one `update_all` installs), not on a later commit of `master`: that build needed a
+  newer Minimig core than the stable one, so an Amiga configuration with a hard disk (e.g. MegaAGS)
+  stayed on black and grey screens. From now on Frontier follows the stable releases only
+  (`tools/fe/upstream_check.sh` checks it). The Minimig options added after that release (68030,
+  drive sounds) come back with the next one.
+* **Amiga configurations**: Amiga, Amiga 500, Amiga 500HD and Amiga 600HD are all in the Computer
+  category, each with its own folder in `games/`; the MGL of `_Computer` which starts the
+  configuration (e.g. the one which boots from a `.hdf`) is the first entry of the folder
+  (`launchers=` in `systems.ini`, usable for any core with several MGLs). Before, only "Amiga" was
+  there and it started nothing without `.adf` files.
+* **X68000 games**: the MGLs of `_Computer/_X68000 Games` (the games of the classic menu) are now in
+  Computer → Sharp X68000, alphabetical, as the first entries of its folder.
+* **VIC-20**: `.rom` cartridges (Ultimate Cartridge, Megacart) now start (file index 2 of the core).
+* **`fe_scrape.py --dedupe-media`** (with `--dry-run` to only see): the arcade versions scraped one by
+  one by older runs have copies of the pictures and videos of their main game; they now use the files
+  of the main game and the identical copies are deleted (7067 files, 8.2 GB on the test MiSTer).
+  No network; different pictures stay.
+* Only `MiSTer`, `systems.ini` and the scraper script change; `menu.rbf` and `fe_av.so` are the same as in `v2026.10.24b`.
+
 ## v2026.10.24b
 * **"#Newest" groups the versions of a game.** The new `.mra` which use the same romset (the
   regions and revisions of a core, or the same game from two cores) are one entry, as in the Arcade

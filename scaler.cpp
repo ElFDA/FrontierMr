@@ -656,12 +656,12 @@ void screenshot_cb(void)
                     snprintf(msg, sizeof(msg), "Screen saved to\n%s",
                             result_data->filename + strlen(SCREENSHOT_DIR "/"));
                     printf("%s\n", msg);
-                    if (cfg.screenshot_info) Info(msg);
+                    Info(msg);
                 }
                 else
                 {
                     printf("Screenshot saved\n");
-                    if (cfg.screenshot_info) Info("Screenshot saved");
+                    Info("Screenshot saved");
                 }
                 break;
 

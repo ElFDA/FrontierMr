@@ -349,6 +349,16 @@ GIOCHI PER SISTEMA
   ArcadeDB e ScreenScraper li trovano. Se una versione non ha dati suoi,
   Frontier mostra quelli di un'altra versione dello stesso gioco.
 
+  Core con piu' configurazioni (Amiga: Amiga, Amiga 500, Amiga 500HD,
+  Amiga 600HD): ognuna e' un sistema della categoria Computer, con la sua
+  cartella in games/ (games/Amiga500HD...), e l'MGL di _Computer che la
+  avvia (systems.ini: launchers=_Computer/Amiga 500HD.mgl) e' la prima voce
+  della cartella: la configurazione che parte da sola, per esempio da un
+  hard disk (.hdf), si avvia da li'; i file .adf della cartella partono con
+  la stessa configurazione. Un percorso di launchers= che finisce con / prende
+  tutti gli MGL di quella cartella: i giochi di _Computer/_X68000 Games sono in
+  Sharp X68000. VIC-20: partono anche le cartucce .rom (Megacart, Ultimate...).
+
 DATI DEI SISTEMI
   Su un sistema (in Computer, Console, Handheld, Other, nei Favorites e in My
   Lists) Frontier mostra cos'e': descrizione, produttore, anno, tipo e
@@ -488,6 +498,13 @@ SCRAPER (dati e immagini)
   Invaders / Balloon Bomber) non si uniscono.
   Le .mra si leggono una volta e restano in .scrape_cache/mra_info.tsv
   (rilette quando cambiano).
+  Copie di passate vecchie: le versioni arcade scaricate una per una hanno file
+  propri, molti identici a quelli del gioco principale (video, marquee...). Da
+  PC o ssh: python3 fe_scrape.py --dedupe-media --dry-run dice quanto spazio
+  occupano; senza --dry-run le versioni usano i file del principale (prima si
+  riscrive il gamelist) e le copie identiche si cancellano. Le immagini diverse
+  restano. Niente rete; sul MiSTer richiede ~10 minuti (confronta i file). Poi
+  premi F5 in Frontier.
   I messaggi dello scraper sono in inglese.
 
 VIDEO

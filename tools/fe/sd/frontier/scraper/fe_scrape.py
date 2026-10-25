@@ -1811,6 +1811,85 @@ def scrape(args, http, games, sysname, cred):
         sysname, updated, notfound, done, gl_path, time.time() - t0))
 
 
+def dedupe_media(args, dry):
+    """--dedupe-media: no network. The arcade versions (the .mra of _alternatives and the versions
+    of a core, see group_versions) which have their own media identical (same bytes) to those of
+    their main game are made to use the files of the main game: the gamelist points there and
+    the copies are deleted (--dry-run: only says). Different files stay, as do the files that
+    another game's entry uses"""
+    cache = os.path.join(args.frontier, '.scrape_cache')
+    games = list_arcade(args.root, cache)
+    by_key = {g.key: g for g in games}
+    gl_path = os.path.join(args.frontier, 'gamelists', 'arcade', 'gamelist.xml')
+    entries = read_gamelist(gl_path)
+    mdir = {t: os.path.join(args.frontier, 'media', 'arcade', t) for t in MEDIA_TYPES}
+    gl_dir = os.path.dirname(gl_path)
+
+    def norm_path(p):
+        return os.path.normpath(p).lower()
+
+    refs = {}  # media file -> keys of the entries which use it
+    for k, e in entries.items():
+        for tag in GAMELIST_MEDIA.values():
+            if e.get(tag):
+                refs.setdefault(norm_path(os.path.join(gl_dir, e[tag])), set()).add(k)
+    digests = {}
+
+    def digest(path):
+        if path not in digests:
+            h = hashlib.md5()
+            with open(path, 'rb') as f:
+                for chunk in iter(lambda: f.read(1 << 20), b''):
+                    h.update(chunk)
+            digests[path] = h.hexdigest()
+        return digests[path]
+
+    plan = []  # (game, type, own file, main file, size)
+    t0 = time.time()
+    for g in games:
+        if not g.main or g.main not in by_key or g.key not in entries:
+            continue
+        for t in MEDIA_TYPES:
+            own, main = find_media(mdir[t], g.key), find_media(mdir[t], g.main)
+            if not own or not main or norm_path(own) == norm_path(main):
+                continue
+            try:
+                size = os.path.getsize(own)
+                if size != os.path.getsize(main) or digest(own) != digest(main):
+                    continue
+            except OSError:
+                continue
+            if refs.get(norm_path(own), set()) - {g.key}:
+                continue  # another game uses this file
+            plan.append((g, t, own, main, size))
+    total = sum(p[4] for p in plan)
+    per = {}
+    for p in plan:
+        per.setdefault(p[1], [0, 0])
+        per[p[1]][0] += 1
+        per[p[1]][1] += p[4]
+    for t, (n, b) in sorted(per.items()):
+        log('%s: %d copies, %.1f MB' % (t, n, b / 1e6))
+    for g, t, own, main, size in plan[:10]:
+        log('   %s: %s = %s' % (t, os.path.basename(own), os.path.basename(main)))
+    log('media identical to those of the main game: %d files, %.1f MB (%.1f s)%s' % (
+        len(plan), total / 1e6, time.time() - t0, ' (dry run: nothing changed)' if dry else ''))
+    if dry or not plan:
+        return
+    # the gamelist first (the main game's files exist), then the copies
+    for g, t, own, main, size in plan:
+        entries[g.key][GAMELIST_MEDIA[t]] = '../../media/arcade/%s/%s' % (t, os.path.basename(main))
+    write_gamelist(gl_path, entries)
+    deleted = 0
+    for g, t, own, main, size in plan:
+        try:
+            os.remove(own)
+            deleted += 1
+        except OSError as ex:
+            log('   not deleted:', own, ex)
+    log('deleted %d files, %.1f MB; gamelist updated' % (deleted, total / 1e6))
+
+
 #############################################################################
 # groups: different titles of the same game (Thunder Force IV / Lightening Force)
 # from the MAME software lists (cloneof), matching the files by name or by CRC.
@@ -2391,6 +2470,8 @@ def main():
     ap.add_argument('--groups', action='store_true', help='only the groups of titles (Thunder Force IV = Lightening Force) from the MAME lists, for --system/--all-systems')
     ap.add_argument('--box-regions', help='preferred regions for the box art (ScreenScraper), e.g. jp or jp,us; also in scraper.ini: [scraper] box_regions = jp')
     ap.add_argument('--systems-info', action='store_true', help='only the data of the systems (Wikipedia: description, maker, year, hardware) for --system/--category/--all-systems; also done with the games, unless --no-text')
+    ap.add_argument('--dedupe-media', action='store_true', help='only (no network): the arcade versions whose media are identical to those of their main game use its files and their copies are deleted; with --dry-run it only says what')
+    ap.add_argument('--dry-run', action='store_true', help='with --dedupe-media: nothing is changed or deleted')
     ap.add_argument('--index', action='store_true', help='only the data of Frontier\'s "Lists" (.cache/meta.tsv) from the gamelists and the cache, no network; also done at the end of every run')
     ap.add_argument('--game', action='append', default=[], help='only this game of the system (file name without extension, '
                     'repeatable): asked again to the sources, its data and pictures downloaded again')
@@ -2438,6 +2519,10 @@ def main():
         log('ffmpeg not found: the videos stay in mp4 (Frontier plays them too)')
     if not Image:
         log('Pillow not found: pictures saved as downloaded (PNG/JPEG only)')
+
+    if args.dedupe_media:
+        dedupe_media(args, args.dry_run)
+        return
 
     http = Http(args.delay)
 

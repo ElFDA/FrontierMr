@@ -86,6 +86,13 @@ data and pictures keeping their own name. The BIOS zips shared by many games, an
 the clones with another title (Space Invaders / Balloon Bomber, Pac-Man / Ms.
 Pac-Man), do not join. On the test MiSTer 443 of 2784 games were not asked any more.
 
+**Copies of older runs.** Versions scraped one by one before have their own files,
+many identical to those of the main game. `python3 fe_scrape.py --dedupe-media
+--dry-run` (from the PC or ssh) says how much space they take; without `--dry-run`
+the versions use the files of the main game (the gamelist is written first) and the
+identical copies are deleted. Different pictures stay. No network, about ten minutes
+on the MiSTer. On the test MiSTer: 7067 files, 8.2 GB. Then press F5 in Frontier.
+
 The new pictures of a system appear when that system is finished; to see
 them at once on a system already open, hold X on it (or press F5).
 

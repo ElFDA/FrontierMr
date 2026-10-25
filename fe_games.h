@@ -37,6 +37,11 @@ std::string fe_games_exts(const std::string &dir);
 // romsets also "zip"
 std::vector<std::string> fe_games_ext_list(const std::string &dir);
 
+// MGLs (paths relative to the root) of the systems of a games/ folder which start a
+// configuration of the core without a file (systems.ini launchers=), only those which
+// exist
+std::vector<std::string> fe_games_launchers(const std::string &dir);
+
 // 1 if a system of the folder loads romsets (systems.ini romsets=1, Neo Geo):
 // zip files and folders listed in its romsets.xml, browsed like the core does
 // (ScanDirectory with SCANO_NEOGEO)

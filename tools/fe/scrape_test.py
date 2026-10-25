@@ -155,6 +155,35 @@ class ScrapeTests(unittest.TestCase):
         self.assertEqual([], self.net.asked('grpu.zip'))
         self.assertEqual([], self.net.asked('grpj.zip'))
 
+    def test_dedupe_media_of_the_versions(self):
+        self.run_scraper()
+        snap, box = self.root / 'frontier/media/arcade/snap', self.root / 'frontier/media/arcade/box'
+        main_snap = next(snap.glob('Main Game.*'))
+        ext = main_snap.suffix
+        # the Japanese version has its own copies: the snap identical, the box different
+        (snap / ('Main Game (Japan)' + ext)).write_bytes(main_snap.read_bytes())
+        (box / ('Main Game (Japan)' + ext)).write_bytes(b'something else')
+        gl = self.root / 'frontier/gamelists/arcade/gamelist.xml'
+        # as after scraping the version on its own: its entry uses its own files
+        entries = self.gamelist()
+        entries['Main Game (Japan)']['image'] = '../../media/arcade/snap/Main Game (Japan)' + ext
+        entries['Main Game (Japan)']['thumbnail'] = '../../media/arcade/box/Main Game (Japan)' + ext
+        self.F.write_gamelist(str(gl), entries)
+        before = gl.read_text()
+        self.run_scraper('--dedupe-media', '--dry-run')
+        self.assertIn('1 files', self.out)
+        self.assertTrue((snap / ('Main Game (Japan)' + ext)).exists())
+        self.assertEqual(before, gl.read_text())
+        self.run_scraper('--dedupe-media')
+        self.assertFalse((snap / ('Main Game (Japan)' + ext)).exists())
+        self.assertTrue((box / ('Main Game (Japan)' + ext)).exists())  # different: stays
+        self.assertTrue(main_snap.exists())
+        e = self.gamelist()['Main Game (Japan)']
+        self.assertEqual('../../media/arcade/snap/' + main_snap.name, e['image'])
+        self.assertTrue(e['thumbnail'].endswith('Main Game (Japan)' + ext))
+        self.run_scraper('--dedupe-media')
+        self.assertIn('0 files', self.out)
+
     def test_bios_zip_does_not_join(self):
         F = self.run_scraper()
         games = {g.key: g for g in F.list_arcade(str(self.root), str(self.root / 'frontier/.scrape_cache'))}
