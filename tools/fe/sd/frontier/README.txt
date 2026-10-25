@@ -340,8 +340,16 @@ GAMES BY SYSTEM
   the folder: the configuration which boots by itself, e.g. from a hard disk
   (.hdf), starts from there; the .adf files of the folder start with the same
   configuration. A launchers= path ending with / takes all the MGLs of that
-  folder: the games of _Computer/_X68000 Games are in Sharp X68000.
+  folder: the games of _Computer/_X68000 Games are in Sharp X68000. A launcher shows the
+  pictures, video and data of the game with the same name (the scraper needs --all-files for
+  names without a region: fe_scrape.py --system X68000 --all-files), and after the game
+  Frontier reopens the same list.
   VIC-20: the .rom cartridges (Megacart, Ultimate...) start too.
+  Commodore 64 disks (.d64 .g64 .t64 .d81) start by themselves: after the disk the MGL
+  loads frontier/autorun/c64.prg, which types LOAD"*",8,1 and RUN (the way
+  MeGaLoSorTer makes its launchers). Coleco Adam and Apple III disks are followed by a reset.
+  Disks and tapes of the other computers which need typed commands (Amstrad, Spectrum,
+  C128...) start with the machine at its prompt: the MGL cannot press keys.
 
 SYSTEM DATA
   On a system (in Computer, Console, Handheld, Other, in Favorites and in My

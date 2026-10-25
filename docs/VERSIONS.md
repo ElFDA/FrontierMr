@@ -81,8 +81,16 @@ category, with its own `games/` folder (`games/Amiga500HD`...). The MGL of
 (`launchers=` in `systems.ini`), so a configuration which boots by itself, for
 example from a hard disk (`.hdf`), starts from Frontier too. The `.adf` files
 of the folder start with the same configuration. A `launchers=` path ending with `/` takes
-all the MGLs of that folder: the games of `_Computer/_X68000 Games` are in Sharp X68000. VIC-20: the `.rom` cartridges
-(Megacart, Ultimate...) start too.
+all the MGLs of that folder: the games of `_Computer/_X68000 Games` are in Sharp X68000. A launcher shows the pictures, video and data
+of the game with the same name (for names without a region the scraper needs
+`--all-files`: `fe_scrape.py --system X68000 --all-files`), and after the game Frontier reopens the same
+list. VIC-20: the `.rom` cartridges (Megacart, Ultimate...) start too.
+
+Commodore 64 disks (`.d64 .g64 .t64 .d81`) start by themselves: after the disk the MGL loads
+`frontier/autorun/c64.prg`, which types `LOAD"*",8,1` and `RUN` (the way MeGaLoSorTer makes its
+launchers). Coleco Adam and Apple III disks are followed by a reset (`reset=` in `systems.ini`). The
+disks and tapes of other computers which need typed commands (Amstrad, Spectrum, C128...) start with
+the machine at its prompt, because an MGL cannot press keys.
 
 ## Arcade and Neo Geo
 

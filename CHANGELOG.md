@@ -4,6 +4,22 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## v2026.10.25b
+* **Pictures, videos and descriptions for the launchers of a system** (the MGL files listed with `launchers=`,
+  e.g. the X68000 games): they were looked up under `mgl` and never found; they now use the media of the
+  system, by the name of the MGL.
+* **Back from an MGL launcher, Frontier reopens the same list** (the X68000 games), not the MiSTer folder
+  `_Computer/_X68000 Games`.
+* **Commodore 64 disks start by themselves**: after the disk image the MGL loads a small PRG
+  (`frontier/autorun/c64.prg`) which types `LOAD"*",8,1` and `RUN`, as MeGaLoSorTer does. Before, a `.d64`
+  left the C64 at the `READY.` prompt.
+* **Coleco Adam and Apple III disks now start**: the MGL adds a reset after the disk is mounted
+  (`reset=` in `systems.ini`), so the machine boots from it. Tested with `tools/fe/launch_test.py`, which
+  launches one file per slot on the MiSTer and takes screenshots.
+* **Launch indexes of 22 systems corrected** (VIC-20 disks, MacPlus floppies, TRS-80 disks, MSX, Aquarius, Apogee,
+  ColecoAdam, Galaksija, Orao...): the MGL finds the OSD entry of the core by its number and a wrong number
+  made it load the first entry. `tools/fe/systems/check_conf.py` compares every slot with the real core.
+
 ## v2026.10.25
 * **Fix: Amiga with a hard disk did not boot.** `MiSTer` is now built on the stable release 20261010
   of Main_MiSTer (the one `update_all` installs), not on a later commit of `master`: that build needed a

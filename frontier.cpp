@@ -1418,6 +1418,17 @@ static void media_key(const fe_entry &e, std::string &sys, std::string &key)
 	sys.clear();
 	key.clear();
 	if (e.name == "..") return;
+	if (starts_with(e.name, FE_MGL))
+	{
+		// a launcher of the system being shown: the data of the game of the same name
+		std::string folder = is_sys_path(cur_dir) ? sys_folder(cur_dir) : is_games_path(cur_dir) ? cur_dir.substr(6) : "";
+		folder = folder.substr(0, folder.find('/'));
+		if (folder.empty()) return;
+		for (auto &c : folder) c = tolower((unsigned char)c);
+		sys = folder;
+		key = e.label;
+		return;
+	}
 	std::string dir, name;
 	entry_place(e, dir, name);
 
@@ -3954,7 +3965,9 @@ static fe_action poll(uint32_t key, int menu)
 				{
 					// by title: the rom is launched, the title is remembered
 					std::string path = full_path(e);
-					fe_action a = path.empty() ? FE_NONE : launch(path, e.label, remember_of(entry_key(e)));
+					// a launcher (@mgl:) is reopened in the list where it is, not in the folder of its file
+					std::string last = (starts_with(e.name, FE_MGL) && !is_key_list(cur_dir)) ? cur_dir + "\t" + e.name : remember_of(entry_key(e));
+					fe_action a = path.empty() ? FE_NONE : launch(path, e.label, last);
 					if (a != FE_NONE) return a;
 				}
 			}

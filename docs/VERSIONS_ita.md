@@ -84,8 +84,16 @@ cartella (`launchers=` in `systems.ini`): cosi' una configurazione che parte
 da sola, per esempio da un hard disk (`.hdf`), parte anche da Frontier. I
 file `.adf` della cartella partono con la stessa configurazione. Un percorso di `launchers=`
 che finisce con `/` prende tutti gli MGL di quella cartella: i giochi di `_Computer/_X68000 Games`
-sono in Sharp X68000. VIC-20:
+sono in Sharp X68000. Un launcher mostra immagini, video e dati del gioco con lo stesso nome (per i
+nomi senza regione lo scraper vuole `--all-files`: `fe_scrape.py --system X68000 --all-files`) e dopo il
+gioco Frontier riapre la stessa lista. VIC-20:
 partono anche le cartucce `.rom` (Megacart, Ultimate...).
+
+I dischi del Commodore 64 (`.d64 .g64 .t64 .d81`) partono da soli: dopo il disco l'MGL carica
+`frontier/autorun/c64.prg`, che scrive `LOAD"*",8,1` e `RUN` (come fanno i launcher di MeGaLoSorTer).
+I dischi di Coleco Adam e Apple III sono seguiti da un reset (`reset=` in `systems.ini`). Dischi e
+cassette degli altri computer che vogliono comandi digitati (Amstrad, Spectrum, C128...) partono con
+la macchina al prompt, perche' un MGL non puo' premere tasti.
 
 ## Arcade e Neo Geo
 

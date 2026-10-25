@@ -31,6 +31,8 @@ struct sysdef
 {
 	std::string id, name, category, rbf, setname;
 	int same_dir = 0;
+	std::string autorun; // a PRG of frontier/ loaded after a disk image (C64: types LOAD and RUN), with the first 'f' slot of prg
+	int reset = 0;     // seconds: <reset> after the disk image is mounted (the disk boots at the reset)
 	int romsets = 0;   // Neo Geo: zip files and folders are romsets (romsets.xml), loaded by the first slot
 	std::vector<std::string> folders;
 	std::vector<std::string> launchers; // MGLs of the root which start a configuration of the core by themselves
@@ -199,6 +201,8 @@ void fe_games_load(const std::string &ini)
 		d.setname = s.get("setname");
 		d.same_dir = s.get_int("setname_same_dir", 0);
 		d.romsets = s.get_int("romsets", 0);
+		d.reset = s.get_int("reset", 0);
+		d.autorun = s.get("autorun");
 		d.folders = split(s.get("folders"), "|");
 		d.launchers = split(s.get("launchers"), "|");
 
@@ -520,6 +524,18 @@ std::string fe_games_mgl(const std::string &rom)
 	if (!sys->setname.empty()) fprintf(fp, "\t<setname%s>%s</setname>\n", sys->same_dir ? " same_dir=\"1\"" : "", xml_escape(sys->setname).c_str());
 	fprintf(fp, "\t<file delay=\"%d\" type=\"%c\" index=\"%d\" path=\"%s\"/>\n", sl->delay, sl->type, sl->index,
 		xml_escape(std::string(getRootDir()) + "/" + rom).c_str());
+	if (sl->type == 's' && !sys->autorun.empty() && sl->index == sys->slots[0].index) // the first drive: LOAD ...,8
+	{
+		// MeGaLoSorTer's way: after the disk the core loads a small PRG which types LOAD"*",8,1 and RUN
+		for (auto &x : sys->slots)
+		{
+			if (x.type != 'f' || std::find(x.exts.begin(), x.exts.end(), "prg") == x.exts.end()) continue;
+			fprintf(fp, "\t<file delay=\"0\" type=\"f\" index=\"%d\" path=\"%s\"/>\n", x.index,
+				xml_escape(std::string(getRootDir()) + "/" + sys->autorun).c_str());
+			break;
+		}
+	}
+	if (sys->reset > 0 && sl->type == 's') fprintf(fp, "\t<reset delay=\"%d\"/>\n", sys->reset);
 	fprintf(fp, "</mistergamedescription>\n");
 	fclose(fp);
 
