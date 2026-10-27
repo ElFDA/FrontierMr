@@ -50,6 +50,9 @@ Either way, the scripts are in the MiSTer menu: F12 -> Scripts.
 1. Download the ZIP of the [latest release](https://github.com/ElFDA/FrontierMr/releases/latest) and copy
    the contents of its `SD` folder to the root of the SD card.
 2. F12 -> Scripts -> `frontier_install`. The MiSTer reboots into Frontier.
+   It also adds Frontier's database for update_all (`downloader_frontiermr.ini`,
+   in the root of the SD), so Frontier is updated by update_all together with
+   everything else.
 
 With a CRT on the VGA output of the analog I/O board, also run
 F12 -> Scripts -> `frontier_crt` (or, in Frontier, Frontier Settings ->
