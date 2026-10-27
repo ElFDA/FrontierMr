@@ -1202,6 +1202,12 @@ const char* get_rbf_path()
 	return core_path;
 }
 
+// FRONTIER
+const char* get_rbf_loaded()
+{
+	return rbf_path;
+}
+
 void MakeFile(const char *filename, const char *data)
 {
 	FILE * file;

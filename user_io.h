@@ -244,6 +244,7 @@ void user_io_rtc_reset();
 const char* get_rbf_dir();
 const char* get_rbf_name();
 const char* get_rbf_path();
+const char* get_rbf_loaded(); // FRONTIER: the rbf loaded (get_rbf_path() is the MGL/MRA)
 
 uint16_t sdram_sz(int sz = -1);
 int user_io_is_dualsdr();

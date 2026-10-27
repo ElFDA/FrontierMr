@@ -4,7 +4,11 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
-## Unreleased
+## v2026.10.27
+* **F12 -> Cores inside a game lists all the cores again**: it opened the folder of the launcher MGL that
+  Frontier makes in `frontier/launch/`, which holds only the game just started, so only that core was
+  there (arcade games were fine). It now opens the folder of the core's `.rbf`, as in the original MiSTer.
+  Alt+F12 still goes back to Frontier. Thanks to HerrBerzerk for the report.
 * **Pictures for the categories and for 46 systems in the themes** (City Pop, simple): the big picture of
   Computer, Console, Handheld and Arcade on the main screen, and one for each system (PlayStation, SNES, Mega Drive,
   C64, Amiga...) in its list, named by the id of `systems.ini` (`media/systems/psx.png`...). **Many thanks to

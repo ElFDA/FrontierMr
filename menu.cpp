@@ -460,6 +460,15 @@ void SelectFile(const char* path, const char* pFileExt, int Options, unsigned ch
 			if(strlen(selPath)) strcat(selPath, "/");
 			strcat(selPath, get_rbf_name());
 		}
+		// FRONTIER: a game started by Frontier is an MGL of frontier/launch: the list of the cores opens at the rbf
+		if (frontier_enabled() && !strncmp(get_rbf_dir(), "frontier/launch", 15) && get_rbf_loaded()[0])
+		{
+			const char *rp = get_rbf_loaded();
+			size_t rl = strlen(getRootDir());
+			if (!strncmp(rp, getRootDir(), rl) && rp[rl] == '/') rp += rl + 1;
+			strncpy(selPath, rp, sizeof(selPath) - 1);
+			selPath[sizeof(selPath) - 1] = 0;
+		}
 		ResolveExistingCorePath(selPath);
 		pFileExt = "RBFMRAMGL";
 		home_dir = NULL;
