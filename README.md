@@ -160,6 +160,8 @@ Settings -> CRT Geometry.
     pictures, space ([italiano](docs/SCRAPER_ita.md)).
   * [Favorites, Recent and My Lists](docs/LISTS.md): lists by hand and from a
     filter on the data of the games ([italiano](docs/LISTS_ita.md)).
+  * [Games on more disks and network shares](docs/STORAGE.md): SD card, second
+    USB disk, CIFS shares in one list ([italiano](docs/STORAGE_ita.md)).
   * [Which version of a game starts](docs/VERSIONS.md): the default region and
     version, `regions=`, the other versions ([italiano](docs/VERSIONS_ita.md)).
   * [Coin-Op mode](docs/COINOP.md): the last game at power on, the countdown,
@@ -231,7 +233,8 @@ To **[pierinolartista](https://www.twitch.tv/pierinolartista)**, the best
 beta tester in the world, able to break any software, even the most stable
 one. Every bug found there made Frontier better.
 
-To **Dedaloso**, for the City Pop theme.
+To **Dedaloso**, for the City Pop theme and for the pictures of the categories and
+of the systems in the themes.
 
 ## License
 

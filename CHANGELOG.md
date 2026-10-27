@@ -4,6 +4,26 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## Unreleased
+* **Pictures for the categories and for 46 systems in the themes** (City Pop, simple): the big picture of
+  Computer, Console, Handheld and Arcade on the main screen, and one for each system (PlayStation, SNES, Mega Drive,
+  C64, Amiga...) in its list, named by the id of `systems.ini` (`media/systems/psx.png`...). **Many thanks to
+  Dedaloso for the pictures!**
+* **Games on more disks and network shares are one list**: PSX on the SD card and more PSX on a second USB disk
+  (or on `/media/network`, `/media/fat/cifs`...) appear together, by title and in the folders view; a system found
+  only on a second disk appears too. `merge_games=0` in `frontier.ini` reads only `/media/fat/games`. The
+  scraper reads the same places. See `docs/STORAGE.md`.
+* **Games on several discs are one game**: a folder with only the discs of one game (PlayStation, Saturn,
+  Mega CD...: `Xenogears/Xenogears (Disc 1).chd` and `(Disc 2).chd`) is shown with the name of the folder and
+  **A** starts the first disc, instead of opening the folder. The details list all the discs, to start
+  another one. A folder with a single cue/chd/iso is a game too.
+* **Every file is a game, whatever its name** (no more region needed): `Crash Bandicoot.chd`, hacks, translations
+  and collections appear in the list of the system, with the file name as title, cleaned (`_` as spaces, no `[!]`,
+  no disc number: `Spyro (Disc 1)` + `Spyro (Disc 2)` are one game); GoodTools codes `(U)`, `(E)`, `(J)` count as
+  regions; No-Intro names still group the versions of a title. The scraper lists the same games. The **Folders** entry at the top of every system
+  is gone by default (`folders=1` brings it back: it is the way to the `Extra` folders and to zip files with
+  free names inside, which the lists still leave out). BIOS files named `[BIOS] ...` are not listed.
+
 ## v2026.10.25b
 * **Pictures, videos and descriptions for the launchers of a system** (the MGL files listed with `launchers=`,
   e.g. the X68000 games): they were looked up under `mgl` and never found; they now use the media of the

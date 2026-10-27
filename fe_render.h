@@ -16,6 +16,7 @@ struct fe_entry
 	std::string label;  // display name
 	std::string date;   // rbf datecode, "yy.mm.dd"
 	std::string tag;    // shown on the right instead of the date (system of a favorite)
+	std::vector<std::string> discs; // folder of the discs of one game shown as a game: all its discs ("Folder/Disc 1.chd", ...)
 	int dir;
 };
 

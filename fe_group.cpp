@@ -93,6 +93,23 @@ static int has_word(const std::string &tag, const char *const *words, int n)
 	return 0;
 }
 
+// GoodTools country codes "U", "JUE" -> region names; empty if the text is not made of them
+static std::vector<std::string> region_codes(const std::string &raw)
+{
+	static const struct { char c; const char *name; } map[] = { { 'U', "usa" }, { 'E', "europe" }, { 'J', "japan" }, { 'W', "world" },
+		{ 'K', "korea" }, { 'A', "australia" }, { 'F', "france" }, { 'G', "germany" }, { 'S', "spain" }, { 'I', "italy" } };
+	std::vector<std::string> out;
+	if (raw.empty() || raw.size() > 3) return out;
+	for (char c : raw)
+	{
+		const char *n = 0;
+		for (auto &m : map) if (m.c == c) n = m.name;
+		if (!n) return std::vector<std::string>();
+		out.push_back(n);
+	}
+	return out;
+}
+
 // "Title (USA, Europe) (Rev 1)" -> title and rom info; 0 if it isn't a No-Intro
 // name with a region: only "(...)" tags after the title, the first one made of
 // regions, no hacks, translations or pirate copies ("[FastROM hack]", "T+Eng v2", "(Hack)", "(Pirate)")
@@ -121,7 +138,8 @@ static int parse_name(const std::string &full, std::string &title, fe_grom &r, c
 		char close = (name[pos] == '(') ? ')' : ']';
 		size_t end = name.find(close, pos);
 		if (end == std::string::npos) return 0;
-		std::string tag = lower(name.substr(pos + 1, end - pos - 1));
+		std::string raw = name.substr(pos + 1, end - pos - 1);
+		std::string tag = lower(raw);
 		int square = (close == ']');
 		pos = end + 1;
 
@@ -136,6 +154,9 @@ static int parse_name(const std::string &full, std::string &title, fe_grom &r, c
 		{
 			first = 0;
 			std::vector<std::string> list = split(tag, ',');
+			// GoodTools country codes: (U), (E), (J), (UE), (JUE)...
+			std::vector<std::string> codes = region_codes(raw);
+			if (!codes.empty()) list = codes;
 			if (list.empty()) return 0;
 			for (auto &x : list)
 			{
@@ -175,7 +196,7 @@ static bool better(const fe_grom &a, const fe_grom &b)
 	if (a.rev != b.rev) return a.rev > b.rev;
 	if (a.alt != b.alt) return a.alt < b.alt;
 	if (a.order != b.order) return a.order < b.order;
-	return strcasecmp(a.name.c_str(), b.name.c_str()) < 0;
+	return fe_natural_cmp(a.name, b.name) < 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -211,7 +232,7 @@ static std::string xml_attr(const std::string &tag, const char *name)
 static std::map<std::string, std::string> read_romsets(const std::string &dir)
 {
 	std::map<std::string, std::string> out;
-	std::string path = std::string(getRootDir()) + "/games/" + dir + "/romsets.xml";
+	std::string path = fe_games_file("games/" + dir + "/romsets.xml");
 	FILE *fp = fopen(path.c_str(), "r");
 	if (!fp) return out;
 	std::string text;
@@ -304,10 +325,194 @@ static std::string title_key(const std::string &t)
 	return out;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// discs of one game in a folder of its own (games/PSX/Xenogears/Xenogears (Disc 1).chd, (Disc 2).chd)
+
+// "disc 1", "disk a", "cd2" at the position `at` of t (lowercase): length of the words, 0 if none
+static size_t disc_word(const std::string &t, size_t at)
+{
+	static const char *words[] = { "disc", "disk", "cd" };
+	for (auto w : words)
+	{
+		size_t n = strlen(w);
+		if (t.compare(at, n, w)) continue;
+		size_t k = at + n;
+		while (k < t.size() && t[k] == ' ') k++;
+		// a number, or a letter alone ("Disc A")
+		if (k < t.size() && (isdigit((unsigned char)t[k]) || (isalpha((unsigned char)t[k]) && (k + 1 == t.size() || t[k + 1] == ' '))))
+			return k - at;
+	}
+	return 0;
+}
+
+// "Title (Disc 1) (v1.1)" -> "Title (v1.1)": the tags and the final words which number
+// the disc taken out; tagged = there was one
+static std::string disc_strip(const std::string &stem, int &tagged)
+{
+	tagged = 0;
+	std::string low, out;
+	for (char c : stem) low += tolower((unsigned char)c);
+	for (size_t i = 0; i < low.size(); i++)
+	{
+		if (low[i] == '(' || low[i] == '[')
+		{
+			size_t e = low.find(low[i] == '(' ? ')' : ']', i);
+			if (e != std::string::npos && disc_word(low.substr(i + 1, e - i - 1), 0))
+			{
+				tagged = 1;
+				i = e;
+				continue;
+			}
+		}
+		out += stem[i];
+	}
+
+	// "Title - Disc 1": the number at the end without a tag
+	low = lower(out);
+	size_t sp = low.find_last_of(' ');
+	if (sp != std::string::npos && sp > 0)
+	{
+		size_t prev = low.find_last_of(' ', sp - 1);
+		size_t from = (prev == std::string::npos) ? 0 : prev + 1;
+		if (disc_word(low, from) && low.find(' ', from + disc_word(low, from)) == std::string::npos)
+		{
+			tagged = 1;
+			out.erase(from);
+		}
+	}
+
+	std::string clean;
+	for (char c : out)
+	{
+		if (c == ' ' && (clean.empty() || clean.back() == ' ')) continue;
+		clean += c;
+	}
+	while (!clean.empty() && strchr(" -_", clean.back())) clean.pop_back();
+	return clean;
+}
+
+// the same in lowercase, to compare the discs of a game
+static std::string disc_base(const std::string &stem, int &tagged)
+{
+	return lower(disc_strip(stem, tagged));
+}
+
+// the title of a file without a No-Intro name: no date in front, "_" are spaces, no disc number
+// (the discs of a game are its versions), no "[!]"
+std::string fe_clean_title(const std::string &stem)
+{
+	std::string s = stem.substr(date_len(stem));
+	for (auto &c : s) if (c == '_') c = ' ';
+	for (size_t p; (p = s.find("[!]")) != std::string::npos;) s.erase(p, 3);
+	int tagged;
+	s = disc_strip(s, tagged);
+	return s.empty() ? stem : s;
+}
+
+int fe_natural_cmp(const std::string &a, const std::string &b)
+{
+	size_t i = 0, j = 0;
+	while (i < a.size() && j < b.size())
+	{
+		if (isdigit((unsigned char)a[i]) && isdigit((unsigned char)b[j]))
+		{
+			size_t ie = i, je = j;
+			while (ie < a.size() && isdigit((unsigned char)a[ie])) ie++;
+			while (je < b.size() && isdigit((unsigned char)b[je])) je++;
+			std::string x = a.substr(i, ie - i), y = b.substr(j, je - j);
+			x.erase(0, std::min(x.find_first_not_of('0'), x.size()));
+			y.erase(0, std::min(y.find_first_not_of('0'), y.size()));
+			if (x.size() != y.size()) return x.size() < y.size() ? -1 : 1;
+			if (int c = x.compare(y)) return c;
+			i = ie;
+			j = je;
+			continue;
+		}
+		int ca = tolower((unsigned char)a[i]), cb = tolower((unsigned char)b[j]);
+		if (ca != cb) return ca < cb ? -1 : 1;
+		i++;
+		j++;
+	}
+	return (i < a.size()) - (j < b.size());
+}
+
+std::vector<std::string> fe_disc_pick(const std::vector<std::string> &names, const std::vector<std::string> &exts)
+{
+	static const char *images[] = { "cue", "chd", "iso", "ccd", "mds", "gdi", "toc" };
+	std::vector<std::string> files, none;
+	int cue = 0;
+	for (auto &name : names)
+	{
+		std::string ext = file_ext(name);
+		if (ext.empty() || ext == "mgl" || std::find(exts.begin(), exts.end(), ext) == exts.end()) continue;
+		if (ext == "cue") cue = 1;
+		files.push_back(name);
+	}
+
+	// the tracks of a cue are not games
+	if (cue)
+	{
+		std::vector<std::string> kept;
+		for (auto &f : files)
+		{
+			std::string ext = file_ext(f);
+			if (ext != "bin" && ext != "img" && ext != "iso" && ext != "wav") kept.push_back(f);
+		}
+		files = kept;
+	}
+	if (files.empty()) return none;
+
+	if (files.size() == 1)
+	{
+		std::string ext = file_ext(files[0]);
+		for (auto x : images) if (ext == x) return files;
+		return none;
+	}
+
+	std::string base;
+	for (size_t i = 0; i < files.size(); i++)
+	{
+		int tagged;
+		std::string b = disc_base(files[i].substr(0, files[i].rfind('.')), tagged);
+		if (!tagged || (i && b != base)) return none;
+		base = b;
+	}
+	std::sort(files.begin(), files.end(), [](const std::string &a, const std::string &b) { return fe_natural_cmp(a, b) < 0; });
+	return files;
+}
+
+std::vector<std::string> fe_disc_set(const std::string &abs, const std::vector<std::string> &exts)
+{
+	std::vector<std::string> names, none;
+	DIR *d = opendir(abs.c_str());
+	if (!d) return none;
+	while (struct dirent *de = readdir(d))
+	{
+		if (de->d_name[0] == '.') continue;
+		int type = de->d_type;
+		if (type == DT_UNKNOWN || type == DT_LNK)
+		{
+			struct stat st;
+			if (stat((abs + "/" + de->d_name).c_str(), &st)) continue;
+			type = S_ISDIR(st.st_mode) ? DT_DIR : DT_REG;
+		}
+		if (type == DT_DIR)
+		{
+			closedir(d);
+			return none;
+		}
+		names.push_back(de->d_name);
+	}
+	closedir(d);
+	return fe_disc_pick(names, exts);
+}
+
 struct found
 {
 	std::string path, name;
 	int depth;
+	int disc = 0;   // a disc of a folder of discs without a region in the name
+	std::string title; // ... and the title is the folder
 };
 
 static void add_found(std::map<std::string, found> &files, const std::string &key, const std::string &path, const std::string &name, int rank)
@@ -316,13 +521,13 @@ static void add_found(std::map<std::string, found> &files, const std::string &ke
 	// shallower), then the first path
 	auto it = files.find(key);
 	if (it != files.end() && (it->second.depth < rank || (it->second.depth == rank && strcasecmp(it->second.path.c_str(), path.c_str()) <= 0))) return;
-	files[key] = { path, name, rank };
+	files[key] = { path, name, rank, 0, std::string() };
 }
 
 // "Altered Beast (USA, Europe).zip" or a whole collection ("SNES.zip", also with
 // folders inside): the roms inside named like a game (only the central directory is read)
 // romsets (Neo Geo): a zip which isn't a romset of romsets.xml, its .neo files
-static void zip_roms(const std::string &root, const std::string &rel, const std::string &zip, int depth,
+static void zip_roms(const std::string &phys, const std::string &rel, const std::string &zip, int depth,
 	const std::set<std::string> &exts, const std::set<std::string> &excl, std::map<std::string, found> &files,
 	const std::map<std::string, std::string> *romsets)
 {
@@ -332,7 +537,7 @@ static void zip_roms(const std::string &root, const std::string &rel, const std:
 
 	mz_zip_archive za;
 	memset(&za, 0, sizeof(za));
-	if (!mz_zip_reader_init_file(&za, (root + "/" + rel + "/" + zip).c_str(), 0)) return;
+	if (!mz_zip_reader_init_file(&za, (phys + "/" + zip).c_str(), 0)) return;
 	int n = mz_zip_reader_get_num_files(&za);
 	for (int i = 0; i < n; i++)
 	{
@@ -356,14 +561,18 @@ static void zip_roms(const std::string &root, const std::string &rel, const std:
 
 static volatile int urgent = 0; // an awaited list is queued: the check of a cache stops
 
-static void walk(const std::string &root, const std::string &rel, int depth, const std::set<std::string> &exts, const std::set<std::string> &excl, std::map<std::string, found> &files, int stoppable,
+// phys = the folder on disk, rel = the same in the paths of the list (games/<folder>/...): the
+// system can be in more storages (fe_games_dirs)
+static void walk(const std::string &phys, const std::string &rel, int depth, const std::set<std::string> &exts, const std::set<std::string> &excl, std::map<std::string, found> &files, int stoppable,
 	const std::map<std::string, std::string> *romsets)
 {
 	if (depth > 8 || (stoppable && urgent)) return;
-	DIR *d = opendir((root + "/" + rel).c_str());
+	DIR *d = opendir(phys.c_str());
 	if (!d) return;
 
 	std::vector<std::string> dirs;
+	std::vector<std::string> names;   // the files of this folder (a folder of discs)
+	std::vector<std::string> pending; // its games, added once it is known if they are discs of a game
 	while (struct dirent *de = readdir(d))
 	{
 		if (de->d_name[0] == '.') continue;
@@ -372,7 +581,7 @@ static void walk(const std::string &root, const std::string &rel, int depth, con
 		if (type == DT_UNKNOWN || type == DT_LNK)
 		{
 			struct stat st;
-			if (stat((root + "/" + rel + "/" + name).c_str(), &st)) continue;
+			if (stat((phys + "/" + name).c_str(), &st)) continue;
 			type = S_ISDIR(st.st_mode) ? DT_DIR : DT_REG;
 		}
 
@@ -385,21 +594,50 @@ static void walk(const std::string &root, const std::string &rel, int depth, con
 		size_t dot = name.rfind('.');
 		if (dot == std::string::npos || dot == 0) continue;
 		std::string ext = lower(name.substr(dot + 1));
+		names.push_back(name);
 		if (ext == "zip" && (!exts.count(ext) || (romsets && !romsets->count(lower(name.substr(0, dot))))))
 		{
-			zip_roms(root, rel, name, depth, exts, excl, files, romsets);
+			zip_roms(phys, rel, name, depth, exts, excl, files, romsets);
 			continue;
 		}
 		if (!exts.count(ext)) continue;
 
-		// the same file in more folders (collections): the one without a date in
-		// front ("1991-08-23 F-Zero (USA).sfc"), then the shallowest one
-		size_t dl = date_len(name);
-		add_found(files, lower(name.substr(dl)), rel + "/" + name, name.substr(0, dot), depth + (dl ? 100 : 0));
+		pending.push_back(name);
 	}
 	closedir(d);
 
-	for (auto &n : dirs) walk(root, rel + "/" + n, depth + 1, exts, excl, files, stoppable, romsets);
+	// a folder with only the discs of one game (no region in the names: with it they are
+	// titles already): the game is the folder, "games/PSX/Xenogears/Xenogears (Disc 1).chd"
+	std::set<std::string> discs;
+	if (dirs.empty() && depth > 0 && !romsets && !names.empty())
+	{
+		std::vector<std::string> list(exts.begin(), exts.end());
+		for (auto &f : fe_disc_pick(names, list))
+		{
+			std::string stem = f.substr(0, f.rfind('.')), title;
+			fe_grom r;
+			static const std::vector<std::string> none;
+			if (parse_name(stem, title, r, none)) continue;
+			found &o = files["\x01" + lower(rel + "/" + f)];
+			o.path = rel + "/" + f;
+			o.name = stem;
+			o.depth = depth;
+			o.disc = 1;
+			o.title = rel.substr(rel.rfind('/') + 1);
+			discs.insert(f);
+		}
+	}
+
+	for (auto &name : pending)
+	{
+		if (discs.count(name)) continue;
+		// the same file in more folders (collections): the one without a date in
+		// front ("1991-08-23 F-Zero (USA).sfc"), then the shallowest one
+		size_t dl = date_len(name);
+		add_found(files, lower(name.substr(dl)), rel + "/" + name, name.substr(0, name.rfind('.')), depth + (dl ? 100 : 0));
+	}
+
+	for (auto &n : dirs) walk(phys + "/" + n, rel + "/" + n, depth + 1, exts, excl, files, stoppable, romsets);
 }
 
 // groups.txt of the scraper: title key -> group id
@@ -432,12 +670,12 @@ static int find_root(std::vector<int> &parent, int i)
 // files with a region of a folder, relative to the root (worker thread)
 static std::vector<std::string> scan_files(const std::string &dir, const std::set<std::string> &exts, const std::set<std::string> &excl, int romsets, int stoppable, int &ok)
 {
-	struct stat st;
-	ok = !stat((std::string(getRootDir()) + "/games/" + dir).c_str(), &st) && S_ISDIR(st.st_mode);
+	std::vector<std::string> srcs = fe_games_dirs("games/" + dir); // the main one first: it wins for a file in two
+	ok = !srcs.empty();
 	std::map<std::string, found> files;
 	std::map<std::string, std::string> names;
 	if (romsets) names = read_romsets(dir);
-	walk(getRootDir(), "games/" + dir, 0, exts, excl, files, stoppable, romsets ? &names : 0);
+	for (auto &src : srcs) walk(src, "games/" + dir, 0, exts, excl, files, stoppable, romsets ? &names : 0);
 
 	if (romsets)
 	{
@@ -478,12 +716,14 @@ static std::vector<std::string> scan_files(const std::string &dir, const std::se
 		else ++it;
 	}
 
+	// every file is a game, whatever its name (no region: the title is the file name, or the folder
+	// for the discs of a game: "<path>\t<title>")
 	std::vector<std::string> out;
 	for (auto &f : files)
 	{
-		fe_grom r;
-		std::string title;
-		if (parse_name(f.second.name, title, r, none)) out.push_back(f.second.path);
+		const std::string &n = f.second.name;
+		if (n[0] == '[' && lower(n).find("bios") != std::string::npos) continue; // "[BIOS] ..."
+		out.push_back(f.second.disc ? f.second.path + "\t" + f.second.title : f.second.path);
 	}
 	return out;
 }
@@ -500,15 +740,27 @@ static void build(fe_gsystem &s, const std::string &dir, const std::vector<std::
 	std::map<std::string, std::vector<int>> by_title;
 	std::map<std::string, std::string> shown; // title key -> title as in the first file
 	std::vector<std::pair<std::string, std::string>> links; // title key -> group id (groups.txt, romsets: setname)
-	for (auto &p : paths)
+	for (auto &entry : paths)
 	{
 		fe_grom r;
 		std::string title, set;
+		size_t tab = entry.find('\t');
+		std::string p = entry.substr(0, tab);
+		std::string forced = (tab == std::string::npos) ? std::string() : entry.substr(tab + 1); // the title: a folder of discs
 		std::string name = p.substr(p.rfind('/') + 1);
 		std::string ext = file_ext(name);
 		size_t dot = name.rfind('.');
 		if (dot != std::string::npos && dot > 0) name.erase(dot);
-		if (romsets ? !parse_romset(name, ext, names, title, r, regions, &set) : !parse_name(name, title, r, regions)) continue;
+		if (romsets ? !parse_romset(name, ext, names, title, r, regions, &set) : (!forced.empty() || !parse_name(name, title, r, regions)))
+		{
+			// no region in the name (or a disc of a folder of discs): a game all the same, the title is the folder
+			// or the name of the file
+			if (romsets) continue;
+			title = forced.empty() ? fe_clean_title(name) : forced;
+			if (title.empty()) continue;
+			r = fe_grom();
+			r.rank = regions.size();
+		}
 		r.path = p;
 		r.name = name;
 		std::string key = title_key(title);
@@ -613,7 +865,7 @@ static std::string cache_path(const std::string &dir)
 // those in zip files) and excluded folders (other ones: the cache is not used)
 static std::string cache_header(const std::string &dir)
 {
-	std::string h = fe_games_romsets(dir) ? "FEG2N" : "FEG2";
+	std::string h = fe_games_romsets(dir) ? "FEG3N" : "FEG3";
 	for (auto &e : exclude) h += "\t" + e;
 	return h;
 }
@@ -673,7 +925,7 @@ static void *worker(void *)
 			queue.push_back(j);
 			continue;
 		}
-		fprintf(stderr, "frontier: games/%s read (nice %d): %d files with a region, %.0f ms\n", j.dir.c_str(), j.nice, (int)paths.size(),
+		fprintf(stderr, "frontier: games/%s read (nice %d): %d games, %.0f ms\n", j.dir.c_str(), j.nice, (int)paths.size(),
 			(t1.tv_sec - t0.tv_sec) * 1000.0 + (t1.tv_nsec - t0.tv_nsec) / 1e6);
 
 		pthread_mutex_lock(&mtx);

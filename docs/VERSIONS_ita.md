@@ -66,14 +66,33 @@ poi F5.
 Favorites e Recent tengono il titolo: anche loro avviano la versione
 predefinita.
 
-## File che non sono nella lista per titolo
+## Giochi su più dischi
 
-Hack, traduzioni, copie pirata, file con altro testo dopo i tag e raccolte
-senza nomi No-Intro sono solo in **Folders**, in cima alla lista del sistema,
-dove le cartelle vere di `games/` si vedono come sono (uno zip si apre come
-una cartella). Le cartelle chiamate `Extra` (giochi senza licenza, prototipi,
-hack...) vengono saltate dalla lista e dallo scraper; altri nomi si
-aggiungono con `exclude_dirs=` in `frontier.ini`.
+Nei sistemi con immagini di disco (PlayStation, Saturn, Mega CD...) una cartella con
+solo i dischi di un gioco, es. `games/PSX/Xenogears/Xenogears (Disc 1).chd` e
+`(Disc 2).chd`, è **un solo gioco** col nome della cartella, anche se i nomi non hanno la
+regione: sta nell'elenco del sistema (anche un cue/chd/iso da solo nella sua
+cartella). **A** avvia il primo disco; **X** elenca tutti i dischi nei dettagli, per avviarne
+un altro. Lo scraper dà al gioco le immagini del primo disco. I file devono differire solo per il
+numero del disco (`(Disc 1)`, `(Disc 2 of 3)`, `- CD2`...); una cartella con sottocartelle
+o con altri giochi resta una cartella.
+
+## File senza la regione nel nome
+
+Ogni file con un'estensione del sistema è un gioco, qualunque sia il nome. Senza una regione
+alla No-Intro (hack, traduzioni, `Crash Bandicoot.chd`...) il titolo è il nome del file,
+ripulito: `_` come spazi, senza `[!]`, senza il numero del disco (`Spyro (Disc 1)` e
+`Spyro (Disc 2)` sono un solo gioco, `Spyro`, e i dischi sono le sue versioni nei dettagli). I
+codici dei paesi di GoodTools `(U)`, `(E)`, `(J)`, `(UE)`... contano come regioni, quindi
+`Sonic (U)` e `Sonic (E)` sono un solo titolo con due versioni. I BIOS chiamati `[BIOS] ...`
+non si elencano.
+
+Restano fuori dagli elenchi due cose: uno zip con nomi liberi dentro (uno zip di giochi C64
+chiamati `Spy vs Spy.crt`: dagli zip si leggono solo le rom con la regione) e le cartelle
+chiamate `Extra` (giochi senza licenza, prototipi, hack...; altri nomi si aggiungono con
+`exclude_dirs=` in `frontier.ini`). `folders=1` in `frontier.ini` aggiunge **Folders** in
+cima a ogni sistema: le cartelle vere di `games/` come sono, dove uno zip si apre come una
+cartella. Le cartelle si vedono anche in **MiSTer**, dalla prima schermata.
 
 ## Core con piu' configurazioni (Amiga)
 

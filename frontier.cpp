@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <algorithm>
 
 #include "frontier.h"
@@ -209,6 +210,7 @@ static uint64_t message_ms = 0;
 static std::string theme_name;    // theme= in frontier.ini
 static int coinop = 0;            // coinop=1 in frontier.ini
 static int coinop_delay = 0;      // s of countdown before the automatic start (0: at once)
+static int show_folders = 0;      // folders=1: "Folders" (the real folders) in the lists of the systems
 static int games_wait = 0;        // games_wait: s to wait for the games disk (USB mounted late)
 static int coinop_safe = 60;      // s of game after which the automatic start is confirmed
 static int coinop_state = 0;      // 0 nothing, 1 waiting for the file, 2 countdown
@@ -632,6 +634,18 @@ static void list_labels()
 	}
 }
 
+static std::string lower(std::string s);
+
+// path for ScanDirectory (it always puts the root in front): relative to the root, as Main does
+// for the other disks ("../usb1/games/PSX")
+static std::string scan_path(const std::string &abs)
+{
+	std::string root = getRootDir();
+	if (abs.compare(0, root.size() + 1, root + "/") == 0) return abs.substr(root.size() + 1);
+	if (abs.compare(0, 7, "/media/") == 0) return "../" + abs.substr(7);
+	return "../../" + abs.substr(1);
+}
+
 static int load_dir(std::string dir, const char *select_name)
 {
 	// copies: the caller may pass cur_dir or a name in entries
@@ -675,7 +689,7 @@ static int load_dir(std::string dir, const char *select_name)
 
 		entries.clear();
 		add_entry("..", "..", 1);
-		add_entry(FE_FOLDERS, "Folders", 1);
+		if (show_folders) add_entry(FE_FOLDERS, "Folders", 1);
 		add_launchers(folder, entries.size());
 		if (!s)
 		{
@@ -955,15 +969,25 @@ static int load_dir(std::string dir, const char *select_name)
 	}
 	else
 	{
-		if (is_games_path(dir))
+		// games/: the same folder can be in more storages (SD card, USB disks, network
+		// shares): the folders are read one after the other and joined
+		std::vector<std::string> srcs;
+		std::string scan_folder;
+		auto scan_games = [&]()
 		{
 			// files of the systems which use this folder, zip files as folders;
 			// romsets (Neo Geo) as in the core's browser: zip files and folders of
 			// romsets.xml are games, with its names
-			std::string folder = dir.substr(6);
-			folder = folder.substr(0, folder.find('/'));
-			if (fe_games_romsets(folder)) ScanDirectory(path, SCANF_INIT, "", SCANO_DIR | SCANO_NEOGEO);
-			else ScanDirectory(path, SCANF_INIT, fe_games_exts(folder).c_str(), SCANO_DIR);
+			if (fe_games_romsets(scan_folder)) ScanDirectory(path, SCANF_INIT, "", SCANO_DIR | SCANO_NEOGEO);
+			else ScanDirectory(path, SCANF_INIT, fe_games_exts(scan_folder).c_str(), SCANO_DIR);
+		};
+		if (is_games_path(dir))
+		{
+			scan_folder = dir.substr(6);
+			scan_folder = scan_folder.substr(0, scan_folder.find('/'));
+			srcs = fe_games_dirs(dir);
+			if (!srcs.empty()) snprintf(path, sizeof(path), "%s", scan_path(srcs[0]).c_str());
+			scan_games();
 		}
 		else
 		{
@@ -987,14 +1011,39 @@ static int load_dir(std::string dir, const char *select_name)
 			add_entry("..", "..", 1);
 		}
 
-		for (int i = 0; i < count; i++)
+		// folders with only the discs of one game are games (they start the first disc)
+		std::vector<fe_entry> disc_games;
+		std::vector<std::string> disc_exts;
+		if (is_games_path(dir))
+		{
+			std::string sysdir = dir.substr(6, dir.find('/', 6) == std::string::npos ? std::string::npos : dir.find('/', 6) - 6);
+			if (!fe_games_romsets(sysdir)) disc_exts = fe_games_ext_list(sysdir);
+		}
+
+		std::set<std::string> seen; // names of the first storage (a name in two is listed once)
+		auto add_items = [&](int n, const std::string &abs_dir, int more)
+		{
+		for (int i = 0; i < n; i++)
 		{
 			direntext_t *de = flist_DirItem(i);
 			fe_entry e;
 			e.name = de->de.d_name;
 			e.dir = (de->de.d_type == DT_DIR);
+			if (more && (e.name == ".." || seen.count(lower(e.name)))) continue;
 			if (hide_alt && e.dir && !strcasecmp(e.name.c_str(), "_alternatives")) continue;
 			e.label = (e.dir && de->altname[0] == '_') ? de->altname + 1 : de->altname;
+			if (e.dir && !disc_exts.empty() && !(de->flags & DT_EXT_ZIP) && e.name != "..")
+			{
+				std::vector<std::string> discs = fe_disc_set(abs_dir + "/" + e.name, disc_exts);
+				if (!discs.empty())
+				{
+					for (auto &f : discs) e.discs.push_back(e.name + "/" + f);
+					e.name = e.discs[0];
+					e.dir = 0;
+					disc_games.push_back(e);
+					continue;
+				}
+			}
 			if (is_games_path(dir) && e.label == e.name && (!e.dir || (de->flags & DT_EXT_ZIP)))
 			{
 				// games and zip files: name without extension
@@ -1009,6 +1058,40 @@ static int load_dir(std::string dir, const char *select_name)
 				e.date = tmp;
 			}
 			entries.push_back(e);
+		}
+		};
+
+		add_items(count, srcs.empty() ? std::string(getRootDir()) + "/" + dir : srcs[0], 0);
+		for (size_t k = 1; k < srcs.size(); k++)
+		{
+			for (auto &e : entries) seen.insert(lower(e.name));
+			for (auto &g : disc_games) seen.insert(lower(g.label)); // the folder of a game of discs
+			snprintf(path, sizeof(path), "%s", scan_path(srcs[k]).c_str());
+			scan_games();
+			add_items(flist_nDirEntries(), srcs[k], 1);
+		}
+		if (srcs.size() > 1)
+		{
+			// the lists of the storages one after the other: folders first, by name as ScanDirectory does
+			size_t first = (!entries.empty() && entries[0].name == "..") ? 1 : 0;
+			std::stable_sort(entries.begin() + first, entries.end(), [](const fe_entry &a, const fe_entry &b)
+			{
+				if (a.dir != b.dir) return a.dir > b.dir;
+				return strcasecmp(a.label.c_str(), b.label.c_str()) < 0;
+			});
+		}
+
+		// the folders of discs among the games, by name
+		for (auto &g : disc_games)
+		{
+			size_t at = entries.size();
+			for (size_t i = 0; i < entries.size(); i++)
+			{
+				if (entries[i].dir || entries[i].name == ".." || strcasecmp(entries[i].label.c_str(), g.label.c_str()) <= 0) continue;
+				at = i;
+				break;
+			}
+			entries.insert(entries.begin() + at, g);
 		}
 
 		// the configurations of the system which start by themselves, first in its folder
@@ -1032,7 +1115,7 @@ static int load_dir(std::string dir, const char *select_name)
 	top = 0;
 	// entering a folder: first item after ".."
 	if (want.empty() && entries.size() > 1 && entries[0].name == "..") sel = 1;
-	if (want.empty() && is_sys_path(dir) && entries.size() > 2) sel = 2; // the first game, not "Folders"
+	if (want.empty() && is_sys_path(dir) && (int)entries.size() > 1 + show_folders) sel = 1 + show_folders; // the first game, not "Folders"
 	if (want.empty() && is_fav_path(dir))
 	{
 		// the first game, not the systems
@@ -1047,7 +1130,8 @@ static int load_dir(std::string dir, const char *select_name)
 	{
 		for (size_t i = 0; i < entries.size(); i++)
 		{
-			if (!strcasecmp(entries[i].name.c_str(), want.c_str()))
+			if (!strcasecmp(entries[i].name.c_str(), want.c_str()) ||
+				std::find(entries[i].discs.begin(), entries[i].discs.end(), want) != entries[i].discs.end())
 			{
 				sel = i;
 				break;
@@ -1493,6 +1577,8 @@ static void media_key(const fe_entry &e, std::string &sys, std::string &key)
 		return;
 	}
 
+	// a game in the folder of its discs: "Xenogears/Xenogears (Disc 1).chd"
+	if (is_games_path(dir)) name.erase(0, name.rfind('/') + 1);
 	const char *ext = strrchr(name.c_str(), '.');
 	key = ext ? name.substr(0, ext - name.c_str()) : name;
 	if (!ext) return;
@@ -1738,6 +1824,9 @@ static void load_theme()
 	// Coin-Op wait for it up to N seconds; 0 (default) = games on the SD card, no wait
 	games_wait = std::max(0, std::min(300, ini.count("games_wait") ? atoi(ini["games_wait"].c_str()) : 0));
 	fe_games_wait(games_wait);
+	// merge_games=0: only /media/fat/games (the other USB disks and the network shares are not read)
+	show_folders = ini.count("folders") ? atoi(ini["folders"].c_str()) != 0 : 0;
+		fe_games_merge(ini.count("merge_games") ? atoi(ini["merge_games"].c_str()) != 0 : 1);
 	coinop_safe = std::max(10, std::min(600, ini.count("coinop_safe") ? atoi(ini["coinop_safe"].c_str()) : 60));
 	// recent=N: games in "Recent" (0 = no "Recent", the games launched aren't written)
 	// newest=N: days a new arcade game stays in "#Newest" of the Arcade folder (0 = no "#Newest")
@@ -2917,6 +3006,12 @@ static fe_action launch(const std::string &path, const std::string &label, const
 		launch_path = fe_games_mgl(path);
 		if (launch_path.empty()) return FE_NONE;
 	}
+	else if (is_games_path(path))
+	{
+		// an MGL of games/ in another storage (USB disk, network share)
+		std::string f = fe_games_file(path);
+		if (f != std::string(getRootDir()) + "/" + path) launch_path = f;
+	}
 
 	std::string name = std::string(getRootDir()) + "/" FE_LAST_FILE;
 	FILE *fp = fopen(name.c_str(), "w");
@@ -2986,6 +3081,27 @@ static void game_versions()
 				versions.push_back(e);
 				version_paths.push_back(s->roms[r].path);
 			}
+		}
+		versions_gen++;
+		return;
+	}
+
+	// the discs of a game in its own folder: the first one starts, the others are versions
+	if (detail_entry.discs.size() > 1 && is_games_path(dir))
+	{
+		versions.clear();
+		version_paths.clear();
+		for (size_t i = 0; i < detail_entry.discs.size(); i++)
+		{
+			const std::string &d = detail_entry.discs[i];
+			std::string stem = d.substr(d.rfind('/') + 1);
+			size_t dot = stem.rfind('.');
+			fe_entry e;
+			e.name = d;
+			e.label = (dot == std::string::npos || dot == 0) ? stem : stem.substr(0, dot);
+			e.dir = 0;
+			versions.push_back(e);
+			version_paths.push_back(dir + "/" + d);
 		}
 		versions_gen++;
 		return;
@@ -3628,7 +3744,16 @@ void frontier_start()
 		std::string file = (pos == std::string::npos) ? last : last.substr(pos + 1);
 		// a file of the SD root: from "MiSTer"
 		if (dir.empty() && !file.empty()) dir = FE_MISTER;
-		if (!load_dir(dir, file.c_str())) load_dir("", 0);
+		// a disc of a game in its own folder: the folder is a game in the one above
+		int done = 0;
+		if (tab == std::string::npos && is_games_path(dir) && dir.find('/', 6) != std::string::npos)
+		{
+			size_t sl = dir.rfind('/');
+			std::string sub = dir.substr(sl + 1) + "/" + file;
+			done = load_dir(dir.substr(0, sl), sub.c_str()) && sel < (int)entries.size() &&
+				std::find(entries[sel].discs.begin(), entries[sel].discs.end(), sub) != entries[sel].discs.end();
+		}
+		if (!done && !load_dir(dir, file.c_str())) load_dir("", 0);
 		coinop_boot();
 	}
 

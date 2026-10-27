@@ -28,6 +28,19 @@ void fe_games_manual(int on);
 void fe_games_wait(int seconds);
 // the folders are read again at the next fe_games_folders()
 void fe_games_rescan();
+
+// merge_games=1 (default): the games of the same system on more storages are one list.
+// The roots, in this order (the first one wins when a file is in two): /media/fat/games
+// (or the USB disk it links to), /media/usb0..7/games, /media/network/games and /media/network,
+// /media/fat/cifs/games and /media/fat/cifs (CIFS shares). A system folder is found in each root
+// whatever its case ("PSX" and "psx"). The roots are looked for at every call.
+void fe_games_merge(int on);
+// the existing folders (absolute paths, the first root first) of a path "games/<folder>[/sub]",
+// empty if none; without merge_games only the first root
+std::vector<std::string> fe_games_dirs(const std::string &rel);
+// absolute path of a file "games/<folder>/..." (also "...zip/inside"): in the first root which
+// has it; <root>/<rel> if none. Other paths: <root>/<rel>
+std::string fe_games_file(const std::string &rel);
 const fe_games_folder *fe_games_find(const std::string &dir);
 
 // extensions for ScanDirectory ("NESMGL") of a games/ folder

@@ -46,6 +46,18 @@ struct fe_gsystem
 	std::map<std::string, int> rom_title;    // rom name (fe_grom.name) -> index in titles (Lists, fe_lists.cpp)
 };
 
+// the disc images of a folder which holds only the discs of one game ("Xenogears (Disc 1).chd",
+// "(Disc 2).chd"; or one cue/chd/iso alone): file names, the first disc first; empty if there are
+// other games (the names differ by more than the number of the disc), subfolders or no image.
+// exts = lowercase extensions of the system. fe_disc_pick() works on the names of a folder (no
+// subfolders) already read, fe_disc_set() reads the folder
+std::vector<std::string> fe_disc_pick(const std::vector<std::string> &names, const std::vector<std::string> &exts);
+std::vector<std::string> fe_disc_set(const std::string &abs_dir, const std::vector<std::string> &exts);
+// title of a file without a No-Intro name: no date in front, "_" as spaces, no disc number, no "[!]"
+std::string fe_clean_title(const std::string &stem);
+// case-insensitive order with the numbers by value ("Disc 2" before "Disc 10")
+int fe_natural_cmp(const std::string &a, const std::string &b);
+
 // preferred regions, e.g. "USA,World,Europe,Japan"; forgets the scans if they change
 void fe_group_regions(const std::string &csv);
 // folders left out of the lists, e.g. "Extra" (default); forgets the scans if they change

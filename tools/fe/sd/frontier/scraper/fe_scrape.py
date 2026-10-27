@@ -579,9 +579,76 @@ def ext_ok(ext, patterns):
     return any(len(p) == len(ext) and all(a == '?' or a == b for a, b in zip(p, ext)) for p in patterns)
 
 
+MERGE_GAMES = True  # merge_games= of frontier.ini
+MEDIA_DIR = '/media'  # where the USB disks and the network share are mounted
+
+
+def game_roots(root):
+    """the folders with the system folders, as Frontier (fe_games.cpp): the main one (root/games, or
+    the disk it links to), the other USB disks, the network shares; the first one wins for a file in two"""
+    roots = [os.path.join(root, 'games')]
+    if not MERGE_GAMES:
+        return roots
+    seen = {os.path.realpath(roots[0])}
+    cands = [os.path.join(MEDIA_DIR, 'usb%d' % i, 'games') for i in range(8)]
+    cands += [os.path.join(MEDIA_DIR, 'network', 'games'), os.path.join(MEDIA_DIR, 'network'),
+              os.path.join(root, 'cifs', 'games'), os.path.join(root, 'cifs')]
+    for c in cands:
+        r = os.path.realpath(c)
+        if os.path.isdir(c) and r not in seen:
+            seen.add(r)
+            roots.append(c)
+    return roots
+
+
+def game_bases(root, folder):
+    """the folders of a system (its name in any case) in each root, the main one first"""
+    out = []
+    for r in game_roots(root):
+        p = os.path.join(r, folder)
+        if os.path.isdir(p):
+            out.append(p)
+            continue
+        try:
+            for n in sorted(os.listdir(r)):
+                if n.lower() == folder.lower() and os.path.isdir(os.path.join(r, n)):
+                    out.append(os.path.join(r, n))
+                    break
+        except OSError:
+            pass
+    return out or [os.path.join(root, 'games', folder)]
+
+
+def walk_games(bases):
+    """os.walk of every folder of a system, one after the other"""
+    for b in bases:
+        yield from os.walk(b)
+
+
+def depth_in(d, bases):
+    """how deep d is inside its base (so that the same game on two disks is compared fairly)"""
+    for b in bases:
+        if d == b or d.startswith(b + os.sep):
+            return d.count(os.sep) - b.count(os.sep)
+    return d.count(os.sep)
+
+
+def game_folders(root):
+    """names of the folders of the systems in all the roots (once each, any case)"""
+    names = {}
+    for r in game_roots(root):
+        try:
+            for n in sorted(os.listdir(r)):
+                if os.path.isdir(os.path.join(r, n)):
+                    names.setdefault(n.lower(), n)
+        except OSError:
+            pass
+    return sorted(names.values())
+
+
 def list_system(root, folder, patterns, crc):
     games = {}
-    base = os.path.join(root, 'games', folder)
+    bases = game_bases(root, folder)
     sysname = folder.lower()
 
     def add(name, size, crcval, getcrc=None):
@@ -597,7 +664,7 @@ def list_system(root, folder, patterns, crc):
         g.ids = SYSTEMS.get(EXT_SYSTEM.get(ext, sysname)) or SYSTEMS.get(sysname)
         games[key] = g
 
-    for d, dirs, files in os.walk(base):
+    for d, dirs, files in walk_games(bases):
         dirs[:] = sorted(x for x in dirs if not x.startswith('.'))
         for f in sorted(files):
             p = os.path.join(d, f)
@@ -627,10 +694,11 @@ def list_system(root, folder, patterns, crc):
 def rom_order(stem, regions):
     """sort key of the version to start (as better() in fe_group.cpp)"""
     name = stem[date_len(stem):]
-    tags = [t.lower() for t in re.findall(r'\(([^)]*)\)', name)]
+    raw = re.findall(r'\(([^)]*)\)', name)
+    tags = [t.lower() for t in raw]
     rank = len(regions)
     if tags:
-        for r in (x.strip() for x in tags[0].split(',')):
+        for r in (region_codes(raw[0]) or [x.strip() for x in tags[0].split(',')]):
             if r in regions:
                 rank = min(rank, regions.index(r))
     rest = tags[1:]
@@ -647,29 +715,118 @@ def rom_order(stem, regions):
         if m:
             rev = int(m.group(1)) * 100 + int(m.group(2) or 0)
     alt = any(t.startswith('alt') for t in rest)
-    return (pre, rank, rerel, -rev, alt, stem.lower())
+    return (pre, rank, rerel, -rev, alt, natural_key(stem))
+
+
+def disc_word_len(t, at):
+    """"disc 1", "disk a", "cd2" at the position `at` of t (lowercase): length of the words, 0 if none"""
+    for w in ('disc', 'disk', 'cd'):
+        if not t.startswith(w, at):
+            continue
+        k = at + len(w)
+        while k < len(t) and t[k] == ' ':
+            k += 1
+        if k < len(t) and (t[k].isdigit() or (t[k].isalpha() and (k + 1 == len(t) or t[k + 1] == ' '))):
+            return k - at
+    return 0
+
+
+def disc_strip(stem):
+    """"Title (Disc 1) (v1.1)" -> ("Title (v1.1)", True): the tags and the final words which number
+    the disc taken out (as fe_group.cpp)"""
+    low = stem.lower()
+    out, tagged, i = '', False, 0
+    while i < len(low):
+        if low[i] in '([':
+            e = low.find(')' if low[i] == '(' else ']', i)
+            if e >= 0 and disc_word_len(low[i + 1:e], 0):
+                tagged = True
+                i = e + 1
+                continue
+        out += stem[i]
+        i += 1
+    low = out.lower()
+    sp = low.rfind(' ')
+    if sp > 0:
+        prev = low.rfind(' ', 0, sp)
+        frm = prev + 1
+        n = disc_word_len(low, frm)
+        if n and ' ' not in low[frm + n:]:
+            tagged = True
+            out = out[:frm]
+    return re.sub(r' +', ' ', out).strip().rstrip(' -_'), tagged
+
+
+def disc_base(stem):
+    b, tagged = disc_strip(stem)
+    return b.lower(), tagged
+
+
+def clean_title(stem):
+    """title of a file without a No-Intro name (fe_clean_title in fe_group.cpp): no date in front,
+    "_" as spaces, no disc number (the discs of a game are its versions), no "[!]" """
+    t = stem[date_len(stem):].replace('_', ' ').replace('[!]', '')
+    t, _ = disc_strip(t)
+    return t or stem
+
+
+def natural_key(s):
+    return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', s.lower())]
+
+
+def disc_pick(names, patterns):
+    """the disc images of a folder with only the discs of one game (as fe_disc_pick in fe_group.cpp):
+    the file names, the first disc first; [] if there are other games or no image"""
+    files = [f for f in names if os.path.splitext(f)[1][1:] and os.path.splitext(f)[1][1:].lower() != 'mgl'
+             and ext_ok(os.path.splitext(f)[1][1:].lower(), patterns)]
+    if any(f.lower().endswith('.cue') for f in files):
+        files = [f for f in files if os.path.splitext(f)[1][1:].lower() not in ('bin', 'img', 'iso', 'wav')]
+    if not files:
+        return []
+    if len(files) == 1:
+        return files if os.path.splitext(files[0])[1][1:].lower() in ('cue', 'chd', 'iso', 'ccd', 'mds', 'gdi', 'toc') else []
+    base = None
+    for f in files:
+        b, tagged = disc_base(os.path.splitext(f)[0])
+        if not tagged or (base is not None and b != base):
+            return []
+        base = b
+    return sorted(files, key=natural_key)
 
 
 def list_titles(root, folder, patterns, crc, regions):
-    """as the list of Frontier (fe_group.cpp): only No-Intro names with a region (also
-    inside zip files with the region in the name), one game per title (the preferred version);
+    """as the list of Frontier (fe_group.cpp): every file is a game; a No-Intro name with a region
+    is a title with its versions (also inside zip files with the region in the name), the others have
+    the file name as title, a folder with only the discs of one game is a game with the name of the folder;
     g.versions = [(key, path)] of all the versions"""
-    base = os.path.join(root, 'games', folder)
+    bases = game_bases(root, folder)
     sysname = folder.lower()
     found = {}  # name without date (lowercase) -> (file, zip member or None, size, crc, rank)
+    disc_title = {}  # file -> folder: the discs of a folder of discs without a region (the title is the folder)
 
     def add(name, path, member, size, crcval, rank):
         key = name[date_len(name):].lower()
         if key not in found or rank < found[key][4]:
             found[key] = (path, member, size, crcval, rank)
 
-    for d, dirs, files in os.walk(base):
+    for d, dirs, files in walk_games(bases):
         dirs[:] = sorted(x for x in dirs if not x.startswith('.') and x.lower() not in EXCLUDE_DIRS)
-        depth = d.count(os.sep)
+        depth = depth_in(d, bases)
+        # a folder with only the discs of one game: the game is the folder (Xenogears/Xenogears (Disc 1).chd)
+        discs = set()
+        if depth > 0 and not dirs:
+            for f in disc_pick([x for x in files if os.path.isfile(os.path.join(d, x))], patterns):
+                if title_region(os.path.splitext(f)[0]):
+                    continue  # a title already
+                discs.add(f)
+                disc_title[os.path.join(d, f)] = os.path.basename(d)
+                add(f, os.path.join(d, f), None, None, None, (bool(date_len(f)), 0, depth))
         for f in sorted(files):
             stem, ext = os.path.splitext(f)
             ext = ext[1:].lower()
             p = os.path.join(d, f)
+            if f in discs:
+                continue
             if not os.path.exists(p):
                 continue  # broken link (the file was moved)
             if ext == 'zip' and not ext_ok(ext, patterns):
@@ -687,15 +844,19 @@ def list_titles(root, folder, patterns, crc, regions):
                 except Exception as e:
                     log('   zip:', f, e)
                 continue
-            if ext == 'mgl' or not ext_ok(ext, patterns) or not title_region(stem):
+            # every file is a game, whatever its name (as fe_group.cpp); not a BIOS "[BIOS] ..."
+            if ext == 'mgl' or not ext_ok(ext, patterns) or (stem.startswith('[') and 'bios' in stem.lower()):
                 continue
             add(f, p, None, None, None, (bool(date_len(f)), 0, depth))
     drop_numbered(found)
 
+    def title_of(v):
+        stem = os.path.splitext(os.path.basename(v[1] or v[0]))[0]
+        return disc_title.get(v[0]) or title_region(stem) or clean_title(stem)
+
     by_title = {}
     for v in found.values():
-        name = os.path.basename(v[1] or v[0])
-        by_title.setdefault(norm(title_region(os.path.splitext(name)[0])), []).append(v)
+        by_title.setdefault(norm(title_of(v)), []).append(v)
 
     games = []
     for t in sorted(by_title):
@@ -703,7 +864,7 @@ def list_titles(root, folder, patterns, crc, regions):
         path, member, size, crcval, _ = vers[0]
         name = os.path.basename(member or path)
         key, ext = os.path.splitext(name)
-        g = Game(sysname, key, './' + name, title_region(key))
+        g = Game(sysname, key, './' + name, title_of(vers[0]))
         g.ext = ext[1:].lower()
         if member:
             g.size, g.crc = size, crcval
@@ -797,13 +958,14 @@ def list_romsets(root, folder, regions):
     """games of a folder of romsets (Neo Geo) as the list of Frontier: .neo files with the
     setname in the name and zip files of romsets.xml, one game per title; media key = file
     name of the version to start, setname for ArcadeDB and ScreenScraper"""
-    base = os.path.join(root, 'games', folder)
-    names = read_romsets(os.path.join(base, 'romsets.xml'))
+    bases = game_bases(root, folder)
+    names = read_romsets(next((os.path.join(b, 'romsets.xml') for b in bases if os.path.isfile(os.path.join(b, 'romsets.xml'))),
+                              os.path.join(bases[0], 'romsets.xml')))
     sysname = folder.lower()
     found = {}  # file name (lowercase) -> (path, depth, zip member info or None): the shallowest one
-    for d, dirs, files in os.walk(base):
+    for d, dirs, files in walk_games(bases):
         dirs[:] = sorted(x for x in dirs if not x.startswith('.') and x.lower() not in EXCLUDE_DIRS)
-        depth = d.count(os.sep)
+        depth = depth_in(d, bases)
         for f in sorted(files):
             p = os.path.join(d, f)
             stem, ext = os.path.splitext(f)
@@ -1916,6 +2078,17 @@ def drop_numbered(found):
             del found[k]
 
 
+GOODTOOLS = {'U': 'usa', 'E': 'europe', 'J': 'japan', 'W': 'world', 'K': 'korea', 'A': 'australia',
+             'F': 'france', 'G': 'germany', 'S': 'spain', 'I': 'italy'}
+
+
+def region_codes(raw):
+    """GoodTools country codes "U", "JUE" -> region names; [] if the text is not made of them"""
+    if not raw or len(raw) > 3 or any(c not in GOODTOOLS for c in raw):
+        return []
+    return [GOODTOOLS[c] for c in raw]
+
+
 def title_region(stem):
     """'Title (USA, Europe) (Rev 1)' -> 'Title'; None if it isn't a No-Intro name with a
     region (hacks, translations, text after the tags...), as fe_group.cpp"""
@@ -1937,7 +2110,7 @@ def title_region(stem):
         tag = m.group(1).lower()
         if first:
             first = False
-            regions = [x.strip() for x in tag.split(',') if x.strip()]
+            regions = region_codes(m.group(1)) or [x.strip() for x in tag.split(',') if x.strip()]
             if not regions or any(r not in REGIONS for r in regions):
                 return None
         elif any(w in tag for w in TAG_EXCLUDED):
@@ -2023,9 +2196,9 @@ def make_groups(args, http, folder, patterns):
 
     # files with a region, one per name (as fe_group.cpp)
     found = {}
-    base = os.path.join(args.root, 'games', folder)
+    bases = game_bases(args.root, folder)
     t0 = time.time()
-    for d, dirs, files in os.walk(base):
+    for d, dirs, files in walk_games(bases):
         dirs[:] = sorted(x for x in dirs if not x.startswith('.') and x.lower() not in EXCLUDE_DIRS)
         for f in sorted(files):
             ext = os.path.splitext(f)[1][1:].lower()
@@ -2529,16 +2702,24 @@ def main():
     cats = {}
     exts = read_systems_ini(os.path.join(args.frontier, 'systems.ini'), cats)
     folders = list(args.system)
-    gdir = os.path.join(args.root, 'games')
+    try:
+        with open(os.path.join(args.frontier, 'frontier.ini'), encoding='utf-8') as f:
+            for line in f:
+                m = re.match(r'\s*merge_games\s*=\s*(\d+)', line)
+                if m:
+                    global MERGE_GAMES
+                    MERGE_GAMES = m.group(1) != '0'
+    except OSError:
+        pass
+    gnames = game_folders(args.root)
     if args.all_systems:
-        folders += sorted(d for d in os.listdir(gdir) if d.lower() in exts and os.path.isdir(os.path.join(gdir, d)))
+        folders += sorted(d for d in gnames if d.lower() in exts)
     for c in args.category:
         want = CATEGORY_NAMES.get(c.lower())
         if not want:
             log('unknown category: %s (Console, Handheld, Computer, Other)' % c)
             continue
-        folders += sorted(d for d in os.listdir(gdir) if want in cats.get(d.lower(), ())
-                          and os.path.isdir(os.path.join(gdir, d)))
+        folders += sorted(d for d in gnames if want in cats.get(d.lower(), ()))
 
     # order of the regions for the version to start: regions= of frontier.ini
     regions = ['usa', 'world', 'europe', 'japan']
@@ -2548,6 +2729,7 @@ def main():
                 m = re.match(r'\s*regions\s*=\s*(.+)', line)
                 if m:
                     regions = [x.strip().lower() for x in m.group(1).split(',') if x.strip()] or regions
+
                 m = re.match(r'\s*exclude_dirs\s*=(.*)', line)
                 if m:
                     EXCLUDE_DIRS.clear()

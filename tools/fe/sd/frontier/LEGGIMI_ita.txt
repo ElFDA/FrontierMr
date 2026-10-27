@@ -253,6 +253,36 @@ GIOCHI SU UN DISCO USB
   riprovare (Coin-Op: "game not found, skipped"). games_wait=0 (default):
   giochi sulla SD, nessuna attesa.
 
+GIOCHI SU PIU' DISCHI E CONDIVISIONI DI RETE
+  I giochi di un sistema possono stare su piu' supporti: i PSX sulla SD e
+  altri PSX su un secondo disco USB, un NAS... Frontier li legge tutti e
+  mostra un solo elenco per sistema (merge_games=1 in frontier.ini, di
+  base). Dove cerca, in quest'ordine (per un gioco presente in due posti vale
+  il primo):
+    /media/fat/games            la SD, oppure il disco a cui e' collegata
+    /media/usb0 ... usb7/games  i dischi USB, ognuno con una cartella games
+    /media/network/games        condivisioni di rete (anche /media/network)
+    /media/fat/cifs/games       condivisioni CIFS montate da cifs_mount.sh
+                                (anche /media/fat/cifs stesso, con le cartelle
+                                dei sistemi dentro: Amiga, C64, NES...)
+  In ognuno la cartella del sistema e' quella di sempre (games/PSX, games/
+  SNES...; maiuscole e minuscole non contano). Anche un sistema presente solo
+  su un secondo disco compare. Le cartelle dello stesso sistema si
+  uniscono: i giochi stanno in un solo elenco e una cartella con lo stesso
+  nome su due dischi mostra i file di tutte e due (es. games/PSX sul primo
+  disco USB e games/PSX/Xenogears sul secondo: un elenco con tutti).
+  Preferiti, Recent e My Lists continuano a funzionare: ricordano il gioco col
+  suo percorso dentro games/.
+  Il browser dei file del MiSTer dentro un core e' diverso: usa il PRIMO posto
+  che ha la cartella (USB prima della rete, la SD per ultima) e non le unisce.
+  Note: il disco o la condivisione devono esserci quando Frontier legge
+  l'elenco; dopo aver collegato un disco o montato una condivisione rileggere
+  gli elenchi (X tenuto su una categoria o su un sistema, vedi AGGIORNARE GLI
+  ELENCHI). Una condivisione lenta o spenta rallenta gli elenchi: smontarla
+  (cifs_umount.sh) oppure merge_games=0. Lo scraper (fe_scrape.py) legge gli
+  stessi posti. Le cartelle col nome di un sistema direttamente in
+  /media/usbN (senza cartella games) non si leggono.
+
 MODALITA' COIN-OP (riparte l'ultimo gioco all'accensione)
   Come un cabinato: accendendo il MiSTer riparte da solo l'ultimo gioco
   lanciato da Frontier (arcade, console, computer, portatili, anche dai
@@ -287,7 +317,7 @@ AGGIORNARE GLI ELENCHI (dopo aver aggiunto o tolto giochi o core)
   versioni arcade si creano la prima volta e restano in /media/fat/frontier/.cache:
   ai ritorni dai giochi Frontier non rilegge il disco. Per rileggerli, X
   tenuto premuto (F sulla tastiera):
-    su un sistema (Console -> Mega Drive) o su "Folders" dentro il sistema
+    su un sistema (Console -> Mega Drive)
                                       i giochi di quel sistema
     su Computer, Console, Handheld, Other nella prima schermata
                                       tutti i sistemi della categoria, anche quelli
@@ -303,18 +333,26 @@ GIOCHI PER SISTEMA
   Computer, Console, Handheld e Other elencano le cartelle di
   /media/fat/games che hanno file e un core installato.
   Dentro un sistema c'e' un solo elenco con tutti i giochi delle sue
-  sottocartelle (1 US, 2 Europe, 2 Japan...), una voce per titolo: entrano i
-  file con la regione nel nome alla No-Intro, es. "Altered Beast (USA, Europe).md";
-  hack, traduzioni, copie pirata e file con altro testo dopo i tag restano
-  solo in "Folders". La data davanti al nome (raccolte per data) non conta.
-  Le raccolte senza nomi No-Intro (es. uno zip di giochi C64 chiamati "Spy vs
-  Spy.crt") stanno solo in "Folders", dove uno zip si apre come una
-  cartella. File e cartelle col nome che inizia con @ ("@C64 2023-4-28.zip")
+  sottocartelle (1 US, 2 Europe, 2 Japan...). Ogni file con un'estensione del
+  sistema e' un gioco, qualunque sia il nome. I file con la regione nel nome
+  alla No-Intro, es. "Altered Beast (USA, Europe).md", sono una voce per titolo
+  (le versioni stanno nei dettagli); gli altri (hack, traduzioni, "Crash
+  Bandicoot.chd"...) hanno come titolo il nome del file, ripulito: "_" come
+  spazi, senza "[!]", senza il numero del disco ("Spyro (Disc 1)" e "Spyro
+  (Disc 2)" sono un solo gioco, "Spyro", i dischi sono le sue versioni). I
+  codici dei paesi di GoodTools (U), (E), (J), (UE)... contano come regioni.
+  La data davanti al nome (raccolte per data) non conta. I BIOS chiamati
+  "[BIOS] ..." non si elencano. File e cartelle col nome che inizia con @ ("@C64 2023-4-28.zip")
   vanno come gli altri.
+  Uno zip con dei giochi dentro (una raccolta come "SNES.zip") elenca solo le
+  rom con la regione nel nome; uno con nomi liberi (es. uno zip di giochi C64
+  chiamati "Spy vs Spy.crt") non si elenca: folders=1 in frontier.ini mette
+  "Folders" in cima a ogni sistema, che porta alle cartelle vere (hack,
+  traduzioni, raccolte...), dove uno zip si apre come una cartella.
   Le cartelle "Extra" (games/NES/Extra con unlicensed, prototipi, hack,
   raccolte...) sono saltate, nella lista e nello scraper: si vedono solo da
-  "Folders". Per cambiare nome o aggiungerne altre: exclude_dirs= in
-  frontier.ini (es. exclude_dirs=Extra,Unsupported).
+  "Folders" (folders=1) o da "MiSTer". Per cambiare nome o aggiungerne altre:
+  exclude_dirs= in frontier.ini (es. exclude_dirs=Extra,Unsupported).
   A avvia la versione uscita davvero (prima di beta e prototipi, anche
   se di un'altra regione) della regione preferita (regions= in frontier.ini,
   di base USA, World, Europe, Japan; poi revisione piu' recente). X mostra
@@ -329,10 +367,17 @@ GIOCHI PER SISTEMA
   la regione nel nome, un gioco per zip ("Altered Beast (USA, Europe).zip")
   oppure tutta una raccolta in un solo zip ("SNES.zip", anche con cartelle
   dentro).
-  "Folders" in cima all'elenco porta alle cartelle vere (hack, traduzioni,
-  raccolte...). L'elenco si legge una volta e resta in .cache/games_*.txt:
-  dalla volta dopo compare subito e non si rilegge piu' (vedi AGGIORNARE GLI
-  ELENCHI).
+  L'elenco si legge una volta e resta in .cache/games_*.txt: dalla volta dopo
+  compare subito e non si rilegge piu' (vedi AGGIORNARE GLI ELENCHI).
+  Giochi su piu' dischi (PlayStation, Saturn, Mega CD...): una cartella con
+  solo i dischi di un gioco ("Xenogears/Xenogears (Disc 1).chd" e
+  "(Disc 2).chd", oppure un cue/chd/iso da solo nella sua cartella) e' un solo
+  gioco col nome della cartella, anche se i nomi non hanno la regione: sta
+  nell'elenco del sistema, e A avvia il primo disco. Nei
+  dettagli X elenca i dischi, per avviarne un altro. I dischi devono differire
+  solo per il numero ((Disc 1), (Disc 2 of 3), - CD2...); una cartella con
+  sottocartelle o con altri giochi resta una cartella. Lo scraper da' al gioco
+  le immagini del primo disco.
   Il gioco parte con un MGL (come i .mgl ufficiali) creato in launch/.
   Neo Geo (romsets=1 in systems.ini): i nomi non hanno la regione, si usano i
   romset come fa il core: i .neo con il setname alla fine del nome
@@ -691,6 +736,8 @@ QUESTA CARTELLA (/media/fat/frontier)
                     systems.ini, es. gameboycolor).
                     JPG per immagini piene, PNG solo se serve la trasparenza;
                     dimensione consigliata 660x495 (4:3). Dopo averle copiate: F5.
+                    I temi City Pop e simple hanno le immagini delle categorie
+                    e di 46 sistemi (di Dedaloso).
   gamelists/<sistema>/gamelist.xml   dati dei giochi (formato EmulationStation)
   media/<sistema>/<tipo>/<gioco>.png|.jpg|.mp4|.mjv
                     tipo: box snap title marquee fanart video

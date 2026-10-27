@@ -38,3 +38,6 @@ tools/fe/fe_av/fev_test
 tools/fe/env.local.sh
 tools/fe/ss_dev.secret
 tools/fe/sd/frontier/scraper/ss_dev.key
+
+# Frontier: assets for the themes (local; they reach GitHub only copied into a published theme)
+tools/fe/theme_assets/

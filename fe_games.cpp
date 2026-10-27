@@ -6,6 +6,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include <dirent.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <time.h>
 
@@ -69,6 +70,134 @@ static std::vector<std::string> split(const std::string &s, const char *sep)
 		pos = end + 1;
 	}
 	return out;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// roots of the games: the SD card (or the disk games/ links to), the other USB disks, the
+// network shares (see fe_games.h)
+
+#ifndef FE_MEDIA
+#define FE_MEDIA "/media"   // where the USB disks and the network share are mounted
+#endif
+static int merge_on = 1;
+
+static std::string real_path(const std::string &p)
+{
+	char buf[PATH_MAX];
+	return realpath(p.c_str(), buf) ? std::string(buf) : p;
+}
+
+static int is_directory(const std::string &p)
+{
+	struct stat st;
+	return !stat(p.c_str(), &st) && S_ISDIR(st.st_mode);
+}
+
+// parent/name, whatever the case of name in parent ("" if it isn't there)
+static std::string find_ci(const std::string &parent, const std::string &name)
+{
+	struct stat st;
+	std::string exact = parent + "/" + name;
+	if (!stat(exact.c_str(), &st)) return exact;
+	DIR *d = opendir(parent.c_str());
+	if (!d) return "";
+	std::string found;
+	while (struct dirent *de = readdir(d))
+	{
+		if (!strcasecmp(de->d_name, name.c_str()))
+		{
+			found = parent + "/" + de->d_name;
+			break;
+		}
+	}
+	closedir(d);
+	return found;
+}
+
+// the roots are looked for at every call (a disk or a share can come at any time; the lists are made by a
+// thread, so nothing is kept)
+static std::vector<std::string> game_roots()
+{
+	std::string root = getRootDir();
+	std::vector<std::string> roots = { root + "/games" };
+	if (!merge_on) return roots;
+
+	std::vector<std::string> seen = { real_path(roots[0]) };
+	std::vector<std::string> candidates;
+	for (int i = 0; i < 8; i++) candidates.push_back(FE_MEDIA "/usb" + std::to_string(i) + "/games");
+	candidates.push_back(FE_MEDIA "/network/games");
+	candidates.push_back(FE_MEDIA "/network");
+	candidates.push_back(root + "/cifs/games");
+	candidates.push_back(root + "/cifs");
+	for (auto &c : candidates)
+	{
+		if (!is_directory(c)) continue;
+		std::string r = real_path(c);
+		if (std::find(seen.begin(), seen.end(), r) != seen.end()) continue;
+		seen.push_back(r);
+		roots.push_back(c);
+	}
+	return roots;
+}
+
+void fe_games_merge(int on)
+{
+	merge_on = on;
+}
+
+// "games/<folder>/sub" -> folder, "/sub" (or ""); 0 if it isn't such a path
+static int games_split(const std::string &rel, std::string &folder, std::string &sub)
+{
+	if (strncasecmp(rel.c_str(), "games/", 6)) return 0;
+	size_t sl = rel.find('/', 6);
+	folder = rel.substr(6, sl == std::string::npos ? std::string::npos : sl - 6);
+	sub = (sl == std::string::npos) ? std::string() : rel.substr(sl);
+	return !folder.empty();
+}
+
+std::vector<std::string> fe_games_dirs(const std::string &rel)
+{
+	std::vector<std::string> out;
+	std::string folder, sub;
+	if (!games_split(rel, folder, sub))
+	{
+		std::string p = std::string(getRootDir()) + "/" + rel;
+		if (is_directory(p)) out.push_back(p);
+		return out;
+	}
+	for (auto &r : game_roots())
+	{
+		std::string f = find_ci(r, folder);
+		if (f.empty()) continue;
+		std::string p = f + sub;
+		if (is_directory(p)) out.push_back(p);
+	}
+	return out;
+}
+
+std::string fe_games_file(const std::string &rel)
+{
+	std::string folder, sub;
+	if (games_split(rel, folder, sub))
+	{
+		// inside a zip file the path goes on after ".zip/": the zip is what must be there
+		std::string test = sub;
+		for (size_t i = 0; i + 5 <= sub.size(); i++)
+		{
+			if (!strncasecmp(sub.c_str() + i, ".zip/", 5))
+			{
+				test = sub.substr(0, i + 4);
+				break;
+			}
+		}
+		struct stat st;
+		for (auto &r : game_roots())
+		{
+			std::string f = find_ci(r, folder);
+			if (!f.empty() && !stat((f + test).c_str(), &st)) return f + sub;
+		}
+	}
+	return std::string(getRootDir()) + "/" + rel;
 }
 
 static int has_folder(const sysdef &s, const std::string &dir)
@@ -322,10 +451,12 @@ const std::vector<fe_games_folder> &fe_games_folders()
 
 	std::string games = std::string(getRootDir()) + "/games";
 	DIR *d = opendir(games.c_str());
-	if (!d) return folders;
+	if (!d && game_roots().size() < 2) return folders;
 
-	while (struct dirent *de = readdir(d))
+	while (d)
 	{
+		struct dirent *de = readdir(d);
+		if (!de) break;
 		if (de->d_name[0] == '.') continue;
 
 		std::vector<const sysdef *> sys = systems_of(de->d_name);
@@ -346,7 +477,7 @@ const std::vector<fe_games_folder> &fe_games_folders()
 		f.category = sys[0]->category;
 		folders.push_back(f);
 	}
-	closedir(d);
+	if (d) closedir(d);
 
 	// the same name in other case (MegaDrive with the games, Megadrive with only
 	// the 240p Test Suite): only the folder with more files, the other one is in
@@ -371,6 +502,36 @@ const std::vector<fe_games_folder> &fe_games_folders()
 		}
 	}
 	folders.erase(std::remove_if(folders.begin(), folders.end(), [&](const fe_games_folder &f) { return hidden.count(f.dir) > 0; }), folders.end());
+
+	// the same system on the other storages: its games join those already there; a system only
+	// there is a folder of its own
+	const std::vector<std::string> roots = game_roots();
+	for (size_t i = 1; i < roots.size(); i++) fprintf(stderr, "frontier: games also in %s\n", roots[i].c_str());
+	for (size_t i = 1; i < roots.size(); i++)
+	{
+		DIR *rd = opendir(roots[i].c_str());
+		if (!rd) continue;
+		while (struct dirent *de = readdir(rd))
+		{
+			if (de->d_name[0] == '.') continue;
+			std::vector<const sysdef *> sys = systems_of(de->d_name);
+			if (sys.empty()) continue;
+			int core = 0;
+			for (auto s : sys) core |= rbf_installed(s->rbf);
+			if (!core) continue;
+			int known = 0;
+			for (auto &f : folders) if (!strcasecmp(f.dir.c_str(), de->d_name)) known = 1;
+			std::string path = roots[i] + "/" + de->d_name;
+			if (known || !is_directory(path) || !dir_has_files(path)) continue;
+			fe_games_folder f;
+			f.dir = de->d_name;
+			f.name = sys[0]->name;
+			f.id = sys[0]->id;
+			f.category = sys[0]->category;
+			folders.push_back(f);
+		}
+		closedir(rd);
+	}
 
 	// folders of the same system (e.g. MegaDrive and Genesis): show the folder name too
 	std::map<std::string, int> count;
@@ -523,7 +684,7 @@ std::string fe_games_mgl(const std::string &rom)
 	fprintf(fp, "\t<rbf>%s</rbf>\n", xml_escape(sys->rbf).c_str());
 	if (!sys->setname.empty()) fprintf(fp, "\t<setname%s>%s</setname>\n", sys->same_dir ? " same_dir=\"1\"" : "", xml_escape(sys->setname).c_str());
 	fprintf(fp, "\t<file delay=\"%d\" type=\"%c\" index=\"%d\" path=\"%s\"/>\n", sl->delay, sl->type, sl->index,
-		xml_escape(std::string(getRootDir()) + "/" + rom).c_str());
+		xml_escape(fe_games_file(rom)).c_str());
 	if (sl->type == 's' && !sys->autorun.empty() && sl->index == sys->slots[0].index) // the first drive: LOAD ...,8
 	{
 		// MeGaLoSorTer's way: after the disk the core loads a small PRG which types LOAD"*",8,1 and RUN

@@ -64,14 +64,31 @@ then F5.
 
 Favorites and Recent hold the title: they start its default version too.
 
-## Files that are not in the list by title
+## Games on several discs
 
-Hacks, translations, pirate copies, files with other text after the tags and
-collections without No-Intro names are only in **Folders**, at the top of the
-list of the system, where the real folders of `games/` are shown as they are
-(a zip opens as a folder). The folders named `Extra` (unlicensed games,
-prototypes, hacks...) are skipped by the list and by the scraper; other names
-can be added with `exclude_dirs=` in `frontier.ini`.
+On a system with disc images (PlayStation, Saturn, Mega CD...) a folder with only
+the discs of one game, e.g. `games/PSX/Xenogears/Xenogears (Disc 1).chd` and
+`(Disc 2).chd`, is **one game** with the name of the folder, even if the names have no
+region: it is in the list of the system (a cue/chd/iso alone in its own folder as well). **A** starts the first disc; **X** lists all the discs in the details, to
+start another one. The scraper gives the game the pictures of its first disc. The files must differ only by the
+number of the disc (`(Disc 1)`, `(Disc 2 of 3)`, `- CD2`...); a folder with subfolders or
+with other games stays a folder.
+
+## Files without a region in the name
+
+Every file with an extension of the system is a game, whatever its name. Without a
+No-Intro style region (hacks, translations, `Crash Bandicoot.chd`...) the file name is the
+title, cleaned: `_` as spaces, no `[!]`, no disc number (`Spyro (Disc 1)` and `Spyro (Disc 2)`
+are one game, `Spyro`, and the discs are its versions in the details). The GoodTools country
+codes `(U)`, `(E)`, `(J)`, `(UE)`... count as regions, so `Sonic (U)` and `Sonic (E)` are one
+title with two versions. BIOS files named `[BIOS] ...` are not listed.
+
+Two things are left out of the lists: a zip with free names inside (a zip of C64 games
+named `Spy vs Spy.crt`: only the roms with a region are read from zip files) and the
+folders named `Extra` (unlicensed games, prototypes, hacks...; other names can be added
+with `exclude_dirs=` in `frontier.ini`). `folders=1` in `frontier.ini` adds **Folders**
+at the top of each system: the real folders of `games/` as they are, where a zip opens as
+a folder. The folders are also in **MiSTer** from the main screen.
 
 ## Cores with several configurations (Amiga)
 
