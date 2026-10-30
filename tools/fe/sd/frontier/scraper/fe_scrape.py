@@ -629,7 +629,8 @@ def game_roots(root):
         cands += [os.path.join(SD_DIR, 'games'), SD_DIR]
     for c in cands:
         r = os.path.realpath(c)
-        if os.path.isdir(c) and r not in seen:
+        # the mount points /media/usb1..7 are there, empty, without a disk
+        if os.path.isdir(c) and r not in seen and any(True for _ in os.scandir(c)):
             seen.add(r)
             roots.append(c)
     return roots

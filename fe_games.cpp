@@ -115,6 +115,17 @@ static std::string find_ci(const std::string &parent, const std::string &name)
 	return found;
 }
 
+// a folder with something in it (the mount points /media/usb1..7 are there, empty, without a disk)
+static int has_entries(const std::string &p)
+{
+	DIR *d = opendir(p.c_str());
+	if (!d) return 0;
+	int n = 0;
+	while (struct dirent *de = readdir(d)) if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..")) { n = 1; break; }
+	closedir(d);
+	return n;
+}
+
 // the roots are looked for at every call (a disk or a share can come at any time; the lists are made by a
 // thread, so nothing is kept)
 static std::vector<std::string> game_roots()
@@ -145,7 +156,7 @@ static std::vector<std::string> game_roots()
 	}
 	for (auto &c : candidates)
 	{
-		if (!is_directory(c)) continue;
+		if (!is_directory(c) || !has_entries(c)) continue;
 		std::string r = real_path(c);
 		if (std::find(seen.begin(), seen.end(), r) != seen.end()) continue;
 		seen.push_back(r);

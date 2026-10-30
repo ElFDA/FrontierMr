@@ -4,7 +4,7 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
-## Unreleased
+## v2026.10.30
 * **The theme editor as a program for Windows, macOS and Linux**: Frontier MRTE (`tools/fe/theme_editor.py`)
   is attached to every release as `FrontierThemeEditor-windows.exe`, `FrontierThemeEditor-macos.zip` (Apple
   Silicon) and `FrontierThemeEditor-linux.tar.gz`, with nothing to install: made by PyInstaller on GitHub
