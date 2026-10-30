@@ -32,7 +32,7 @@ try:
                                QPixmap, QRawFont, QTransform)
     from PySide6.QtWidgets import (QAbstractItemView, QAbstractSpinBox, QApplication, QColorDialog, QComboBox,
                                    QCompleter, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
-                                   QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox,
+                                   QListWidget, QListWidgetItem, QMainWindow, QMenu, QMenuBar, QMessageBox,
                                    QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QSplitter,
                                    QStackedWidget, QTabWidget, QTextBrowser, QTextEdit, QToolButton,
                                    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -46,6 +46,7 @@ try:
 except ImportError:   # first frames of the videos are then not shown
     QMediaPlayer = QVideoSink = None
 
+IS_MAC = sys.platform == 'darwin'   # menus in the system menu bar, shortcuts shown by macOS
 APP_VERSION = '0.3.2'   # counter: after x.x.9 the next ten starts (0.2.9 -> 0.3.0)
 
 # ======================================================================
@@ -1844,7 +1845,7 @@ NEWS = {
 <h3>What's new in version %s</h3>
 <h4>0.3.2</h4>
 <ul>
-<li>The menus (File, Edit, View, Variant, Help) are drawn inside the window on macOS too: before, they were missing there.</li>
+<li>On macOS the menus (File, Edit, View, Variant, Help) are in the system menu bar at the top of the screen, with the usual Cmd shortcuts; before, they were missing there.</li>
 </ul>
 <h4>0.3.1</h4>
 <ul>
@@ -1863,7 +1864,7 @@ NEWS = {
 <h3>Novità della versione %s</h3>
 <h4>0.3.2</h4>
 <ul>
-<li>I menu (File, Modifica, Vista, Variante, Aiuto) si vedono nella finestra anche su macOS: prima lì mancavano.</li>
+<li>Su macOS i menu (File, Modifica, Vista, Variante, Aiuto) sono nella barra dei menu di sistema in alto sullo schermo, con le solite scorciatoie Cmd; prima lì mancavano.</li>
 </ul>
 <h4>0.3.1</h4>
 <ul>
@@ -2236,13 +2237,18 @@ class Editor(QMainWindow):
         self.logo = QLabel()
         self.logo.setContentsMargins(0, 0, 8, 0)
         tl.addWidget(self.logo)
-        # buttons with a menu instead of a QMenuBar: on macOS a QMenuBar inside a window
-        # was not drawn (the menus went to the system bar, which is empty here)
+        # menus: on macOS in the system menu bar (a QMenuBar without a parent is the one of the
+        # application), elsewhere buttons with a menu in the top bar
         self.menus = {}
+        self.native_mb = QMenuBar() if IS_MAC else None
         for name in ('File', 'Edit', 'View', 'Variant', 'Help'):
             m = QMenu(self)
             m.aboutToShow.connect(lambda m=m, n=name: self._fill_menu(m, n))
             self.menus[name] = m
+            if IS_MAC:
+                self.native_mb.addMenu(m)
+                self.T(m.setTitle, name)
+                continue
             b = QToolButton()
             b.setObjectName('menubtn')
             b.setMenu(m)
@@ -2291,6 +2297,11 @@ class Editor(QMainWindow):
             'z100': act('100%', lambda: self.set_zoom(1), 'Ctrl+1'),
             'grid': act('Show grid', lambda: self.set_opt('grid', not self.S['opt']['grid']), "Ctrl+'"),
         }
+
+        if IS_MAC:
+            # an empty menu is not shown in the system bar: filled now, again when it opens
+            for n, m in self.menus.items():
+                self._fill_menu(m, n)
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -2706,11 +2717,11 @@ class Editor(QMainWindow):
                 continue
             if 'action' in it:
                 a = it['action']
-                a.setText(tx(a.data()) + (('\t' + it['key']) if it.get('key') else ''))
+                a.setText(tx(a.data()) + (('\t' + it['key']) if it.get('key') and not IS_MAC else ''))
                 a.setEnabled(not it.get('disabled'))
                 menu.addAction(a)
                 continue
-            text = it['label'] + (('\t' + it['key']) if it.get('key') else '')
+            text = it['label'] + (('\t' + it['key']) if it.get('key') and not IS_MAC else '')
             a = menu.addAction(text)
             if it.get('check') is not None:
                 a.setCheckable(True)

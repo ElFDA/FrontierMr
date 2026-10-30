@@ -6,7 +6,8 @@ a release is its entry here.
 
 ## Unreleased
 * **Theme editor program for macOS: the menus are back** (version 0.3.2): File, Edit, View, Variant and Help
-  were not drawn inside the window on macOS; they are now buttons with a menu, the same on every system.
+  were missing on macOS; they are now in the system menu bar, with the Cmd shortcuts (on Windows and Linux
+  they are buttons with a menu in the top bar).
   The guides explain how to open the unsigned app on a recent macOS (Privacy & Security → Open Anyway).
 
 ## v2026.10.30

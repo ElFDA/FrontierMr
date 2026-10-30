@@ -23,7 +23,7 @@ into the theme folder and shows the first frame of the videos. Each release has 
 | System | File | First start |
 |---|---|---|
 | Windows | [FrontierThemeEditor-windows.exe](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-windows.exe) | Windows SmartScreen may say "unknown publisher": **More info → Run anyway** |
-| macOS (Apple Silicon) | [FrontierThemeEditor-macos.zip](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-macos.zip) | unzip it and move the app out of Downloads; it is not signed, so the first time macOS blocks it with only "Move to Trash": open **System Settings → Privacy & Security**, scroll down and press **Open Anyway** (older macOS: right click the app → **Open**); if it says the app is damaged: `xattr -cr FrontierThemeEditor.app` |
+| macOS (Apple Silicon) | [FrontierThemeEditor-macos.zip](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-macos.zip) | unzip it and move the app out of Downloads; it is not signed, so the first time macOS blocks it with only "Move to Trash": open **System Settings → Privacy & Security**, scroll down and press **Open Anyway**; if it says the app is damaged: `xattr -cr FrontierThemeEditor.app` |
 | Linux (x86_64) | [FrontierThemeEditor-linux.tar.gz](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-linux.tar.gz) | `tar xzf` it and start `./FrontierThemeEditor`; if it says that the Qt "xcb" plugin can not be loaded, install `libxcb-cursor0` |
 
 On an Intel Mac, or anywhere else: `pip install PySide6`, then

@@ -23,7 +23,7 @@ ogni release:
 | Sistema | File | Primo avvio |
 |---|---|---|
 | Windows | [FrontierThemeEditor-windows.exe](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-windows.exe) | SmartScreen di Windows può dire "editore sconosciuto": **Ulteriori informazioni → Esegui comunque** |
-| macOS (Apple Silicon) | [FrontierThemeEditor-macos.zip](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-macos.zip) | scompattalo e sposta l'app fuori da Download; non è firmata, quindi la prima volta macOS la blocca con il solo "Sposta nel Cestino": apri **Impostazioni di Sistema → Privacy e sicurezza**, scorri in basso e premi **Apri comunque** (macOS meno recenti: clic destro sull'app → **Apri**); se dice che l'app è danneggiata: `xattr -cr FrontierThemeEditor.app` |
+| macOS (Apple Silicon) | [FrontierThemeEditor-macos.zip](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-macos.zip) | scompattalo e sposta l'app fuori da Download; non è firmata, quindi la prima volta macOS la blocca con il solo "Sposta nel Cestino": apri **Impostazioni di Sistema → Privacy e sicurezza**, scorri in basso e premi **Apri comunque**; se dice che l'app è danneggiata: `xattr -cr FrontierThemeEditor.app` |
 | Linux (x86_64) | [FrontierThemeEditor-linux.tar.gz](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-linux.tar.gz) | `tar xzf` e avvia `./FrontierThemeEditor`; se dice che il plugin "xcb" di Qt non si carica, installa `libxcb-cursor0` |
 
 Su un Mac Intel, o altrove: `pip install PySide6`, poi
