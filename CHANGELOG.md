@@ -4,6 +4,11 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## Unreleased
+* **Theme editor program for macOS: the menus are back** (version 0.3.2): File, Edit, View, Variant and Help
+  were not drawn inside the window on macOS; they are now buttons with a menu, the same on every system.
+  The guides explain how to open the unsigned app on a recent macOS (Privacy & Security → Open Anyway).
+
 ## v2026.10.30
 * **The theme editor as a program for Windows, macOS and Linux**: Frontier MRTE (`tools/fe/theme_editor.py`)
   is attached to every release as `FrontierThemeEditor-windows.exe`, `FrontierThemeEditor-macos.zip` (Apple

@@ -32,7 +32,7 @@ try:
                                QPixmap, QRawFont, QTransform)
     from PySide6.QtWidgets import (QAbstractItemView, QAbstractSpinBox, QApplication, QColorDialog, QComboBox,
                                    QCompleter, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
-                                   QListWidget, QListWidgetItem, QMainWindow, QMenu, QMenuBar, QMessageBox,
+                                   QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox,
                                    QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QSplitter,
                                    QStackedWidget, QTabWidget, QTextBrowser, QTextEdit, QToolButton,
                                    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -46,7 +46,7 @@ try:
 except ImportError:   # first frames of the videos are then not shown
     QMediaPlayer = QVideoSink = None
 
-APP_VERSION = '0.3.1'   # counter: after x.x.9 the next ten starts (0.2.9 -> 0.3.0)
+APP_VERSION = '0.3.2'   # counter: after x.x.9 the next ten starts (0.2.9 -> 0.3.0)
 
 # ======================================================================
 # Language: automatic from the system (Italian or English), or chosen in View > Language
@@ -1318,9 +1318,9 @@ UI_ORDER = ['light', 'medium', 'dark']
 QSS = '''
 QMainWindow, QDialog {{ background: {app}; }}
 #menubar {{ background: {panel_hd}; border-bottom: 1px solid {line}; }}
-QMenuBar {{ background: transparent; border: none; }}
-QMenuBar::item {{ padding: 4px 10px; border-radius: 4px; background: transparent; }}
-QMenuBar::item:selected, QMenuBar::item:pressed {{ background: {ctrl}; }}
+#menubtn {{ padding: 4px 10px; }}
+#menubtn::menu-indicator {{ image: none; width: 0; }}
+#menubtn:hover, #menubtn:pressed, #menubtn:open {{ background: {ctrl}; }}
 QMenu {{ background: {menu}; border: 1px solid {line}; padding: 4px; }}
 QMenu::item {{ padding: 5px 26px 5px 24px; border-radius: 4px; }}
 QMenu::item:selected {{ background: {accent}; color: {accent_t}; }}
@@ -1842,6 +1842,10 @@ HELP = {
 NEWS = {
     'en': '''
 <h3>What's new in version %s</h3>
+<h4>0.3.2</h4>
+<ul>
+<li>The menus (File, Edit, View, Variant, Help) are drawn inside the window on macOS too: before, they were missing there.</li>
+</ul>
 <h4>0.3.1</h4>
 <ul>
 <li><b>Make 4:3</b> in the top bar, and <b>Make 4:3</b>, <b>Make detail</b>, <b>Make screensaver</b> in the Variant menu, as in the web editor: they make the missing file from the one you are editing.</li>
@@ -1857,6 +1861,10 @@ NEWS = {
 ''',
     'it': '''
 <h3>Novità della versione %s</h3>
+<h4>0.3.2</h4>
+<ul>
+<li>I menu (File, Modifica, Vista, Variante, Aiuto) si vedono nella finestra anche su macOS: prima lì mancavano.</li>
+</ul>
 <h4>0.3.1</h4>
 <ul>
 <li><b>Crea 4:3</b> nella barra in alto, e <b>Crea 4:3</b>, <b>Crea dettaglio</b>, <b>Crea screensaver</b> nel menu Variante, come nell'editor web: creano il file che manca da quello che stai modificando.</li>
@@ -2228,15 +2236,20 @@ class Editor(QMainWindow):
         self.logo = QLabel()
         self.logo.setContentsMargins(0, 0, 8, 0)
         tl.addWidget(self.logo)
-        mb = QMenuBar()
-        mb.setNativeMenuBar(False)
+        # buttons with a menu instead of a QMenuBar: on macOS a QMenuBar inside a window
+        # was not drawn (the menus went to the system bar, which is empty here)
         self.menus = {}
         for name in ('File', 'Edit', 'View', 'Variant', 'Help'):
-            m = mb.addMenu(name)
+            m = QMenu(self)
             m.aboutToShow.connect(lambda m=m, n=name: self._fill_menu(m, n))
             self.menus[name] = m
-            self.T(m.setTitle, name)
-        tl.addWidget(mb)
+            b = QToolButton()
+            b.setObjectName('menubtn')
+            b.setMenu(m)
+            b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            self.T(b.setText, name)
+            tl.addWidget(b)
         tl.addStretch(1)
         self.doc_title = QLabel()
         self.save_mode = QLabel()

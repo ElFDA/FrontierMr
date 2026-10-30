@@ -801,7 +801,8 @@ MAKING A THEME
   with nothing to install, on the same Releases page:
   FrontierThemeEditor-windows.exe, FrontierThemeEditor-macos.zip,
   FrontierThemeEditor-linux.tar.gz (it is not signed: the first time Windows
-  wants "More info -> Run anyway", macOS right click -> Open). It has the same
+  wants "More info -> Run anyway", macOS: System Settings -> Privacy & Security -> Open Anyway, or
+  `xattr -cr FrontierThemeEditor.app`). It has the same
   functions, in menus: File > Open folder / Save / Load .ini, "Make 4:3" in
   the top bar, Variant > Make detail / Make screensaver.
   The editor edits theme.ini, theme_43.ini, detail.ini, detail_43.ini,

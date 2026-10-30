@@ -838,7 +838,8 @@ CREARE UN TEMA
   senza niente da installare, nella stessa pagina Releases:
   FrontierThemeEditor-windows.exe, FrontierThemeEditor-macos.zip,
   FrontierThemeEditor-linux.tar.gz (non e' firmato: la prima volta Windows
-  vuole "Ulteriori informazioni -> Esegui comunque", macOS clic destro -> Apri).
+  vuole "Ulteriori informazioni -> Esegui comunque", macOS: Impostazioni di Sistema -> Privacy e sicurezza -> Apri comunque,
+  oppure `xattr -cr FrontierThemeEditor.app`).
   Ha le stesse funzioni, nei menu: File > Apri cartella / Salva / Carica
   .ini, "Crea 4:3" nella barra in alto, Variante > Crea dettaglio / Crea
   screensaver.
