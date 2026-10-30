@@ -14,6 +14,27 @@ Italian: [THEME_EDITOR_ita.md](THEME_EDITOR_ita.md).
   theme folder; other browsers can only download the `.ini` files with
   **Download .ini**.
 
+### As a program (Windows, macOS, Linux)
+
+The editor is also a program which needs no browser and nothing installed
+(Frontier MRTE, made from `tools/fe/theme_editor.py`); it always saves straight
+into the theme folder and shows the first frame of the videos. Each release has it:
+
+| System | File | First start |
+|---|---|---|
+| Windows | [FrontierThemeEditor-windows.exe](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-windows.exe) | Windows SmartScreen may say "unknown publisher": **More info → Run anyway** |
+| macOS (Apple Silicon) | [FrontierThemeEditor-macos.zip](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-macos.zip) | unzip it; the first time right click the app → **Open** (it is not signed) |
+| Linux (x86_64) | [FrontierThemeEditor-linux.tar.gz](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-linux.tar.gz) | `tar xzf` it and start `./FrontierThemeEditor`; if it says that the Qt "xcb" plugin can not be loaded, install `libxcb-cursor0` |
+
+On an Intel Mac, or anywhere else: `pip install PySide6`, then
+`python theme_editor.py` (the file is in `tools/fe/` of the repository).
+
+The steps below name the buttons of the web page; in the program **Open folder** and
+**Save** (Ctrl+S) are in the File menu, **Import .ini** is File → **Load .ini**, the
+**Variant** is chosen with **16:9 | 4:3** and the screen menu of the top bar, **Make 4:3**
+is in the top bar, and **Make 4:3**, **Make detail** and **Make screensaver** are also in
+the Variant menu. Help → *How to use it and shortcuts* explains the rest.
+
 ## What you need
 
 A theme is a folder with `theme.ini` and the pictures and fonts it uses. The

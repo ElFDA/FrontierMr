@@ -30,6 +30,7 @@
 #include "fe_loading.h"
 #include "fe_render.h"
 #include "fe_media.h"
+#include "fe_games.h"
 #include "fe_theme.h"
 #include "frontier.h"
 #include "file_io.h"
@@ -292,7 +293,7 @@ static void draw_osd(int pct, const char *file)
 static int start(const char *file)
 {
 	if (!frontier_enabled()) return 0;
-	std::string root = std::string(getRootDir()) + "/frontier";
+	std::string root = fe_root() + "/frontier";
 	std::map<std::string, std::string> ini = fe_read_ini(root + "/frontier.ini");
 	if (ini.count("loading_screen") && !atoi(ini["loading_screen"].c_str())) return 0;
 	std::string theme = ini.count("theme") ? ini["theme"] : std::string("citypop_blue");

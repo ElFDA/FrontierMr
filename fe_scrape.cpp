@@ -85,7 +85,7 @@ int fe_scrape_start(const std::vector<std::string> &args)
 	mkdir((fe + "/.cache").c_str(), 0755);
 	std::string log = fe + "/.cache/scrape.log";
 
-	std::vector<std::string> av = { "python3", "-u", script, "--root", root_dir, "--status", status_file() };
+	std::vector<std::string> av = { "python3", "-u", script, "--root", root_dir, "--frontier", fe, "--status", status_file() };
 	av.insert(av.end(), args.begin(), args.end());
 	std::vector<char *> argv;
 	for (auto &a : av) argv.push_back((char *)a.c_str());

@@ -89,7 +89,7 @@ SYSTEMS = {
     'atari2600': (26, 'Atari - 2600'),
     'atari5200': (40, 'Atari - 5200'),
     'atari7800': (41, 'Atari - 7800'),
-    'atari800': (43, None),
+    'atari800': (43, 'Atari - 8-bit'),
     'atarilynx': (28, 'Atari - Lynx'),
     'jaguar': (27, 'Atari - Jaguar'),
     'atarist': (42, 'Atari - ST'),
@@ -117,6 +117,33 @@ SYSTEMS = {
     'x68000': (79, 'Sharp - X68000'),
     '3do': (29, 'The 3DO Company - 3DO'),
     'apple-ii': (86, None),
+    # the other folders of systems.ini with a system on ScreenScraper (its systemesListe.php,
+    # checked on 2026-10-30); the variants of a core (2P, HD...) use the system of the games
+    'gameboy2p': (9, 'Nintendo - Game Boy'), 'sgb': (9, 'Nintendo - Game Boy'),
+    'gba2p': (12, 'Nintendo - Game Boy Advance'), 'gamegear2p': (21, 'Sega - Game Gear'),
+    'atarilynx2p': (28, 'Atari - Lynx'), 'nds': (15, 'Nintendo - Nintendo DS'), 'gamenwatch': (52, 'Handheld Electronic Game'),
+    'megaduck': (90, None), 'gamecom': (121, 'Tiger - Game.com'), 'gamate': (266, None), 'supervision': (207, 'Watara - Supervision'),
+    'pocketchallengev2': (237, None), 'tamagotchi': (293, None), 'avision': (78, 'Entex - Adventure Vision'),
+    'cd-i': (133, 'Philips - CD-i'), 'casio_pv-1000': (74, 'Casio - PV-1000'), 'creativision': (241, 'VTech - CreatiVision'), 'loopy': (98, 'Casio - Loopy'),
+    'marty': (253, None), 'myvision': (305, None), 'scv': (67, 'Epoch - Super Cassette Vision'), 'superacan': (100, 'Funtech - Super Acan'),
+    'vc4000': (281, None), 'vsmile': (120, 'VTech - V.Smile'), 'arduboy': (263, 'Arduboy Inc - Arduboy'), 'openbor': (214, None),
+    'pico-8': (234, None), 'solarus': (223, None),
+    'amiga500': (64, 'Commodore - Amiga'), 'amiga500hd': (64, 'Commodore - Amiga'),
+    'amiga600hd': (64, 'Commodore - Amiga'), 'amigacd32': (130, 'Commodore - CD32'),
+    'c128': (66, 'Commodore - 64'), 'c16': (99, 'Commodore - Plus-4'), 'pet2001': (240, 'Commodore - PET'), 'pet_universal': (240, 'Commodore - PET'),
+    'ao486': (135, 'DOS'), 'z486': (135, 'DOS'), 'pcxt': (135, 'DOS'), 'pcxt-ega': (135, 'DOS'),
+    'pcjr': (135, 'DOS'), 'tandy1000': (135, 'DOS'),
+    'macplus': (146, None), 'maciivi': (146, None), 'maclc': (146, None), 'maclcii': (146, None),
+    'macquadra800': (146, None), 'apple-iigs': (217, None), 'tk2000': (86, None),
+    'acornatom': (36, None), 'acornelectron': (85, None), 'bbcmicro': (37, None), 'adam': (89, None),
+    'alicemc10': (311, None), 'bk0011m': (93, None), 'coco2': (144, None), 'coco3': (144, None),
+    'eg2000': (92, None), 'fm-7': (97, None), 'jupiter': (126, None), 'laser': (320, None),
+    'lynx48': (88, None), 'oric': (131, None), 'pc8801': (221, 'NEC - PC-8001 - PC-8801'), 'pc98': (208, 'NEC - PC-98'),
+    'samcoupe': (213, None), 'svi328': (218, 'Spectravideo - SVI-318 - SVI-328'), 'sord m5': (323, None), 'ti-99_4a': (205, None),
+    'tomo': (141, 'Thomson - MOTO'), 'tomytutor': (317, None), 'zx81': (77, 'Sinclair - ZX 81'),
+    'tsconf': (76, 'Sinclair - ZX Spectrum'), 'zxnext': (76, 'Sinclair - ZX Spectrum'),
+    # only on libretro (no ScreenScraper system)
+    'studio-ii': (None, 'RCA - Studio II'),
 }
 # extensions which in a shared folder belong to another system
 EXT_SYSTEM = {'fds': 'fds', 'gbc': 'gbc', 'gg': 'gamegear', 'sg': 'sg1000', 'a26': 'atari2600'}
@@ -581,18 +608,25 @@ def ext_ok(ext, patterns):
 
 MERGE_GAMES = True  # merge_games= of frontier.ini
 MEDIA_DIR = '/media'  # where the USB disks and the network share are mounted
+SD_DIR = '/media/fat'  # the SD card: with "Storage: USB" in the OSD the root is a USB disk
 
 
 def game_roots(root):
     """the folders with the system folders, as Frontier (fe_games.cpp): the main one (root/games, or
-    the disk it links to), the other USB disks, the network shares; the first one wins for a file in two"""
+    the disk it links to), the other USB disks (with games/ or the system folders right on the disk),
+    the network shares, the root, the SD card; the first one wins for a file in two"""
     roots = [os.path.join(root, 'games')]
     if not MERGE_GAMES:
         return roots
     seen = {os.path.realpath(roots[0])}
-    cands = [os.path.join(MEDIA_DIR, 'usb%d' % i, 'games') for i in range(8)]
+    cands = []
+    for i in range(8):
+        usb = os.path.join(MEDIA_DIR, 'usb%d' % i)
+        cands += [os.path.join(usb, 'games'), usb]
     cands += [os.path.join(MEDIA_DIR, 'network', 'games'), os.path.join(MEDIA_DIR, 'network'),
-              os.path.join(root, 'cifs', 'games'), os.path.join(root, 'cifs')]
+              os.path.join(root, 'cifs', 'games'), os.path.join(root, 'cifs'), root]
+    if os.path.realpath(SD_DIR) != os.path.realpath(root):
+        cands += [os.path.join(SD_DIR, 'games'), SD_DIR]
     for c in cands:
         r = os.path.realpath(c)
         if os.path.isdir(c) and r not in seen:
@@ -715,7 +749,22 @@ def rom_order(stem, regions):
         if m:
             rev = int(m.group(1)) * 100 + int(m.group(2) or 0)
     alt = any(t.startswith('alt') for t in rest)
-    return (pre, rank, rerel, -rev, alt, natural_key(stem))
+    return (pre, rank, rerel, -rev, alt, tosec_dump(name), natural_key(stem))
+
+
+def tosec_dump(stem):
+    """TOSEC copies of a game: the first disk first, then the clean dumps (fewer [cr], [t], [a]...),
+    as tosec_dump in fe_group.cpp"""
+    if not tosec_info(stem):
+        return 0
+    n = 0
+    low = stem.lower()
+    for p in [i for i, c in enumerate(low) if c == '(']:
+        w = disc_word_len(low, p + 1)
+        m = re.match(r'\d+', low[p + 1 + w:]) if w else None
+        if m and int(m.group(0)) > 1:
+            n += 1000
+    return n + stem.count('[')
 
 
 def disc_word_len(t, at):
@@ -762,10 +811,28 @@ def disc_base(stem):
     return b.lower(), tagged
 
 
+# TOSEC: the date and the publisher, each in brackets, one after the other after the title
+TOSEC_DATE = re.compile(r' \(((?:19|20)[0-9x?]{2}(?:-[0-9x?]{2}){0,2})\)\(([^)]*)\)')
+
+
+def tosec_info(stem):
+    """'Predator 2 (1991)(ImageWorks)(M3)(Disk 1 of 2)[cr CPY]' -> ('Predator 2', '1991', 'ImageWorks');
+    None if it isn't a TOSEC name (as fe_tosec_title in fe_group.cpp)"""
+    m = TOSEC_DATE.search(stem)
+    if not m:
+        return None
+    title = stem[:m.start()].split(' (')[0].strip()
+    return (title, m.group(1)[:4], m.group(2)) if title else None
+
+
 def clean_title(stem):
     """title of a file without a No-Intro name (fe_clean_title in fe_group.cpp): no date in front,
-    "_" as spaces, no disc number (the discs of a game are its versions), no "[!]" """
+    "_" as spaces, no disc number (the discs of a game are its versions), no "[!]"; of a TOSEC
+    name only the title (its disks, versions, cracks and translations are the versions)"""
     t = stem[date_len(stem):].replace('_', ' ').replace('[!]', '')
+    tosec = tosec_info(t)
+    if tosec:
+        return tosec[0]
     t, _ = disc_strip(t)
     return t or stem
 
@@ -794,6 +861,9 @@ def disc_pick(names, patterns):
     return sorted(files, key=natural_key)
 
 
+ZIP_FREE_MAX = 3000  # games with free names in the zip files of a system: more are not scraped
+
+
 def list_titles(root, folder, patterns, crc, regions):
     """as the list of Frontier (fe_group.cpp): every file is a game; a No-Intro name with a region
     is a title with its versions (also inside zip files with the region in the name), the others have
@@ -808,6 +878,8 @@ def list_titles(root, folder, patterns, crc, regions):
         key = name[date_len(name):].lower()
         if key not in found or rank < found[key][4]:
             found[key] = (path, member, size, crcval, rank)
+
+    zip_free = []  # games with free names in zip files (TOSEC collections): seen in the folders view
 
     for d, dirs, files in walk_games(bases):
         dirs[:] = sorted(x for x in dirs if not x.startswith('.') and x.lower() not in EXCLUDE_DIRS)
@@ -839,8 +911,13 @@ def list_titles(root, folder, patterns, crc, regions):
                                 continue
                             b = m.rsplit('/', 1)[-1]
                             ms, me = os.path.splitext(b)
-                            if ext_ok(me[1:].lower(), patterns) and title_region(ms):
-                                add(b, p, m, i.file_size, '%08x' % i.CRC, (bool(date_len(b)), 1, depth + m.count('/')))
+                            if not ext_ok(me[1:].lower(), patterns) or (ms.startswith('[') and 'bios' in ms.lower()):
+                                continue
+                            rank = (bool(date_len(b)), 1, depth + m.count('/'))
+                            if title_region(ms):
+                                add(b, p, m, i.file_size, '%08x' % i.CRC, rank)
+                            else:
+                                zip_free.append((b, p, m, i.file_size, '%08x' % i.CRC, rank))
                 except Exception as e:
                     log('   zip:', f, e)
                 continue
@@ -848,6 +925,12 @@ def list_titles(root, folder, patterns, crc, regions):
             if ext == 'mgl' or not ext_ok(ext, patterns) or (stem.startswith('[') and 'bios' in stem.lower()):
                 continue
             add(f, p, None, None, None, (bool(date_len(f)), 0, depth))
+    # the zip files with free names inside, unless they are a huge collection (C64: tens of thousands)
+    if len(zip_free) <= ZIP_FREE_MAX:
+        for z in zip_free:
+            add(*z)
+    else:
+        log('%s: %d games with free names in zip files, more than %d: not scraped' % (folder, len(zip_free), ZIP_FREE_MAX))
     drop_numbered(found)
 
     def title_of(v):
@@ -1154,19 +1237,109 @@ def libretro_name(name):
     return re.sub(r'[&*/:`<>?\\|"]', '_', name)
 
 
-def libretro_media(g):
+LIBRETRO = 'https://thumbnails.libretro.com/'
+LIBRETRO_TYPES = (('box', 'Named_Boxarts'), ('snap', 'Named_Snaps'), ('title', 'Named_Titles'))
+LIBRETRO_INDEX_DAYS = 30
+LR_REGIONS = ['usa', 'world', 'europe', 'japan']  # regions= of frontier.ini (main)
+ARTICLES = ('the', 'a', 'an', 'la', 'le', 'les', 'il', 'lo', 'gli', 'el', 'los', 'las', 'der', 'die', 'das')
+
+
+def title_norm(t):
+    """a title to compare: lowercase, letters and digits only, "Aventura Original, La" = "La Aventura Original" """
+    t = ' '.join(t.lower().replace('_', ' ').split())
+    m = re.match(r'^(.*), (%s)$' % '|'.join(ARTICLES), t)
+    if m:
+        t = m.group(2) + ' ' + m.group(1)
+    return ' '.join(re.sub(r'[^0-9a-z]+', ' ', t).split())
+
+
+def libretro_title(name):
+    """the title of a libretro picture: the text before its first tag"""
+    return title_norm(re.split(r' [(\[]', name, 1)[0])
+
+
+class LibretroIndex:
+    """the names of the libretro pictures of a system (the listing of thumbnails.libretro.com, one
+    request per type, kept LIBRETRO_INDEX_DAYS days in the cache): a picture is looked for by the
+    name of the file, then by the title of the game (TOSEC names, hacks, other revisions)"""
+
+    def __init__(self, http, cache, repo):
+        self.names, self.by_title = {}, {}
+        for t, folder in LIBRETRO_TYPES:
+            names = self.load(http, cache, repo, folder)
+            if names is None:
+                continue
+            self.names[t] = names
+            bt = {}
+            for n in names:
+                bt.setdefault(libretro_title(n), []).append(n)
+            self.by_title[t] = bt
+
+    @staticmethod
+    def load(http, cache, repo, folder):
+        path = os.path.join(cache, 'libretro_index', re.sub(r'[^0-9A-Za-z]+', '_', repo) + '-' + folder + '.txt')
+
+        def read():
+            with open(path, encoding='utf-8') as f:
+                return {l.rstrip('\n') for l in f if l.strip()}
+        try:
+            if time.time() - os.path.getmtime(path) < LIBRETRO_INDEX_DAYS * 86400:
+                return read()
+        except OSError:
+            pass
+        data = http.get(LIBRETRO + urllib.parse.quote(repo) + '/' + folder + '/')
+        names = {urllib.parse.unquote(h)[:-4] for h in re.findall(r'href="([^"?/]+\.png)"', (data or b'').decode('utf-8', 'replace'))}
+        if not data:
+            try:
+                return read()  # the listing of the last time
+            except OSError:
+                return None
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path + '.tmp', 'w', encoding='utf-8') as f:
+            f.write(''.join(n + '\n' for n in sorted(names)))
+        os.replace(path + '.tmp', path)
+        return names
+
+    def find(self, t, g, exact):
+        """the name of the picture of type t of the game g, None if libretro hasn't one"""
+        names = self.names.get(t)
+        if not names:
+            return None
+        for n in exact:
+            if libretro_name(n) in names:
+                return libretro_name(n)
+        cands = self.by_title[t].get(title_norm(g.title))
+        return min(cands, key=lambda n: lr_rank(n, g)) if cands else None
+
+
+def lr_rank(name, g):
+    """the best picture among those of the same title: same year and publisher (TOSEC), the
+    preferred region, then the one with fewer tags"""
+    mine, other, low = tosec_info(g.key), tosec_info(name), name.lower()
+    tags = [x.strip() for tag in re.findall(r'\(([^)]*)\)', low) for x in tag.split(',')]
+    region = min([LR_REGIONS.index(r) for r in tags if r in LR_REGIONS] or [len(LR_REGIONS)])
+    return (0 if mine and other and mine[1] == other[1] else 1,
+            0 if mine and mine[2] and mine[2].lower() in low else 1,
+            region, low.count('[') + low.count('('), len(name), name)
+
+
+def libretro_media(g, index=None):
     if not g.ids or not g.ids[1]:
         return {}
-    base = 'https://thumbnails.libretro.com/' + urllib.parse.quote(g.ids[1]) + '/'
-    names = [g.title, g.key] if g.ids is ARCADE or g.setname else [g.key]
+    base = LIBRETRO + urllib.parse.quote(g.ids[1]) + '/'
+    names = list(dict.fromkeys([g.title, g.key] if g.ids is ARCADE or g.setname else [g.key]))
     out = {}
-    for t, folder in (('box', 'Named_Boxarts'), ('snap', 'Named_Snaps'), ('title', 'Named_Titles')):
-        out[t] = [base + folder + '/' + urllib.parse.quote(libretro_name(n)) + '.png' for n in dict.fromkeys(names)]
+    for t, folder in LIBRETRO_TYPES:
+        if index and t in index.names:
+            n = index.find(t, g, names)
+            out[t] = [base + folder + '/' + urllib.parse.quote(n) + '.png'] if n else []
+        else:
+            out[t] = [base + folder + '/' + urllib.parse.quote(libretro_name(n)) + '.png' for n in names]
     return out
 
 
 def ss_fetch(http, cache, g, cred, lang, fresh=False):
-    if not cred or not g.ids:
+    if not cred or not g.ids or g.ids[0] is None:
         return None, {}
     params = {
         'devid': cred['devid'], 'devpassword': cred['devpassword'], 'softname': 'MiSTerFrontier',
@@ -1806,6 +1979,16 @@ def scrape(args, http, games, sysname, cred):
             misses = set(l.rstrip('\n') for l in f)
     miss_file = open(miss_path, 'a', encoding='utf-8')
 
+    # the names of the libretro pictures of the system, read at the first game which needs them
+    lr_indexes = {}
+
+    def libretro_index(g):
+        if not g.ids or not g.ids[1]:
+            return None
+        if g.ids[1] not in lr_indexes:
+            lr_indexes[g.ids[1]] = LibretroIndex(http, cache, g.ids[1])
+        return lr_indexes[g.ids[1]]
+
     def fetch(g):
         """the data and the media of a game from the sources"""
         e = entries.get(g.key, {})
@@ -1828,7 +2011,7 @@ def scrape(args, http, games, sysname, cred):
                     i, m = None, {}
                     http.trouble = True
             elif src == 'libretro':
-                i, m = None, libretro_media(g)
+                i, m = None, libretro_media(g, libretro_index(g))
             else:
                 continue
             for k, v in (i or {}).items():
@@ -2737,6 +2920,7 @@ def main():
     except OSError:
         pass
     SS_PREF[:] = [SS_REGION[r] for r in regions if r in SS_REGION]
+    LR_REGIONS[:] = regions
     box = args.box_regions or (cp['scraper'].get('box_regions', '') if cp.has_section('scraper') else '')
     for r in (x.strip().lower() for x in box.split(',') if x.strip()):
         r = SS_REGION.get(r, r)  # japan -> jp, or already the ScreenScraper code

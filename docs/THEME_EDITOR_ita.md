@@ -13,6 +13,29 @@ English: [THEME_EDITOR.md](THEME_EDITOR.md).
   tema; gli altri browser possono solo scaricare i file `.ini` con
   **Download .ini**.
 
+### Come programma (Windows, macOS, Linux)
+
+L'editor è anche un programma che non ha bisogno del browser né di installare
+niente (Frontier MRTE, fatto da `tools/fe/theme_editor.py`); salva sempre
+direttamente nella cartella del tema e mostra il primo fotogramma dei video. È in
+ogni release:
+
+| Sistema | File | Primo avvio |
+|---|---|---|
+| Windows | [FrontierThemeEditor-windows.exe](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-windows.exe) | SmartScreen di Windows può dire "editore sconosciuto": **Ulteriori informazioni → Esegui comunque** |
+| macOS (Apple Silicon) | [FrontierThemeEditor-macos.zip](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-macos.zip) | scompattalo; la prima volta clic destro sull'app → **Apri** (non è firmata) |
+| Linux (x86_64) | [FrontierThemeEditor-linux.tar.gz](https://github.com/ElFDA/FrontierMr/releases/latest/download/FrontierThemeEditor-linux.tar.gz) | `tar xzf` e avvia `./FrontierThemeEditor`; se dice che il plugin "xcb" di Qt non si carica, installa `libxcb-cursor0` |
+
+Su un Mac Intel, o altrove: `pip install PySide6`, poi
+`python theme_editor.py` (il file è in `tools/fe/` del repository).
+
+I passi qui sotto citano i pulsanti della pagina web; nel programma (in italiano)
+**Apri cartella** e **Salva** (Ctrl+S) sono nel menu File, **Import .ini** è File →
+**Carica .ini**, la **Variante** si sceglie con **16:9 | 4:3** e il menu della schermata
+nella barra in alto, **Crea 4:3** è nella barra in alto, e **Crea 4:3**, **Crea dettaglio**
+e **Crea screensaver** sono anche nel menu Variante. Aiuto → *Come si usa e scorciatoie*
+spiega il resto.
+
 ## Cosa serve
 
 Un tema è una cartella con `theme.ini` e le immagini e i font che usa. Si parte

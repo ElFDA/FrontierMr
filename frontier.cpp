@@ -69,12 +69,14 @@
 #define FE_CRT_Y        "@crt_y"
 #define FE_CRT_RESET    "@crt_reset"
 #define FE_SET_VISIBLE  FE_SETTINGS "/visible"   // settings folder: the systems shown or hidden
+#define FE_SET_VIEW     FE_SETTINGS "/view"      // settings folder: each system by title or in its folders
 #define FE_SET_SCRAPER  FE_SETTINGS "/scraper"   // settings folder: the scraper
 #define FE_SET_SCR_SYS  FE_SET_SCRAPER "/systems" // the systems to scrape
 #define FE_SET_THEMES   FE_SETTINGS "/themes"    // settings folder: theme and text layout
 #define FE_SET_SAVER    FE_SETTINGS "/saver"     // settings folder: the screensaver
 #define FE_SET_CRT      FE_SETTINGS "/crt"       // settings folder: the picture on the CRT
 #define FE_HIDE         "@hide/"             // + games/ folder or _Arcade: shown or hidden
+#define FE_VIEW         "@view/"             // + games/ folder: by title or in its folders
 #define FE_SCR_SYS      "@scrsys/"           // + games/ folder or _Arcade: scraped or not
 #define FE_SCR_ALL      "@scrall/"           // + category: all its systems scraped or not
 #define FE_SCR_RUN      "@scr_run"           // start or stop the scraper
@@ -245,6 +247,8 @@ static char jump_letter = 0;    // L/R: letter jumped to, shown by the theme (${
 // "Frontier Settings" > "Visible systems" and "Scraper" (frontier.ini)
 static std::vector<std::string> hidden;     // hidden=: games/ folders (and _Arcade) not shown
 static std::vector<std::string> scr_systems; // scrape_systems=: games/ folders (and _Arcade) to scrape
+static std::vector<std::string> view_folders; // view_folders=: games/ folders shown in their folders
+static std::vector<std::string> view_titles;  // view_titles=: games/ folders shown by title
 static std::string scr_lang = "en";         // scrape_lang=
 static int scr_text = 1;                    // scrape_text=0: no data, only pictures and videos
 static std::vector<std::string> scr_media;  // scrape_media=box,snap,...
@@ -430,7 +434,7 @@ static int is_dir(const std::string &path)
 static int is_setting(const std::string &name)
 {
 	return name == FE_COINOP || name == FE_CRT_OUT || name == FE_THEME || name == FE_TEXT_LAYOUT || name == FE_RECENT_MAX || starts_with(name, FE_SAVER) || starts_with(name, "@crt_") ||
-		starts_with(name, FE_HIDE) || starts_with(name, FE_SCR_SYS) || starts_with(name, FE_SCR_ALL) || starts_with(name, "@scr_");
+		starts_with(name, FE_HIDE) || starts_with(name, FE_VIEW) || starts_with(name, FE_SCR_SYS) || starts_with(name, FE_SCR_ALL) || starts_with(name, "@scr_");
 }
 
 static int is_settings_dir(const std::string &dir)
@@ -481,6 +485,15 @@ static std::string join_list(const std::vector<std::string> &list)
 static int is_hidden(const std::string &system)
 {
 	return in_list(hidden, system);
+}
+
+// a system in its real folders (as the MiSTer's browser) instead of its games by title: the
+// choice of the settings, or the default of systems.ini (the computers)
+static int folder_view(const std::string &system)
+{
+	if (in_list(view_folders, system)) return 1;
+	if (in_list(view_titles, system)) return 0;
+	return fe_games_view_folders(system);
 }
 
 static int arcade_there()
@@ -575,6 +588,14 @@ static void settings_tags()
 			e.tag = str;
 		}
 		else if (starts_with(e.name, FE_HIDE)) e.tag = is_hidden(e.name.substr(strlen(FE_HIDE))) ? "HIDDEN" : "shown";
+		else if (starts_with(e.name, FE_VIEW)) e.tag = folder_view(e.name.substr(strlen(FE_VIEW))) ? "Folders" : "Titles";
+		else if (starts_with(e.name, FE_SET_VIEW "/"))
+		{
+			std::string cat = e.name.substr(e.name.rfind('/') + 1);
+			int all = 0, n = 0;
+			for (auto &f : fe_games_folders()) if (f.category == cat) { all++; n += folder_view(f.dir); }
+			e.tag = n == all ? std::string("Folders") : n ? std::to_string(n) + " in folders" : std::string("Titles");
+		}
 		else if (starts_with(e.name, FE_SCR_SYS)) e.tag = in_list(scr_systems, e.name.substr(strlen(FE_SCR_SYS))) ? "ON" : "OFF";
 		else if (starts_with(e.name, FE_SCR_ALL))
 		{
@@ -677,10 +698,12 @@ static int load_dir(std::string dir, const char *select_name)
 	else if (is_sys_path(dir))
 	{
 		std::string folder = sys_folder(dir);
-		fe_group_request(folder);
-		const fe_gsystem *s = fe_group_get(folder);
-		// nothing with a region: only the folders (coming up from them: the list of systems)
-		if (s && s->titles.empty())
+		// a system in its folders (the computers): its games are not read by title
+		int in_folders = folder_view(folder);
+		if (!in_folders) fe_group_request(folder);
+		const fe_gsystem *s = in_folders ? 0 : fe_group_get(folder);
+		// in its folders, or nothing with a region: only the folders (coming up from them: the list of systems)
+		if (in_folders || (s && s->titles.empty()))
 		{
 			const fe_games_folder *f = fe_games_find(folder);
 			if (want == FE_FOLDERS) return f ? load_dir(std::string(FE_GAMES "/") + f->category, folder.c_str()) : load_dir("", 0);
@@ -767,7 +790,7 @@ static int load_dir(std::string dir, const char *select_name)
 	{
 		// the arcade games which appeared lately, the newest first, with the day Frontier saw them
 		if (!newest_days) return 0;
-		fe_newest_scan(getRootDir(), std::string(getRootDir()) + "/" FE_DIR "/" FE_NEWEST_FILE);
+		fe_newest_scan(getRootDir(), fe_root() + "/" FE_DIR "/" FE_NEWEST_FILE);
 		entries.clear();
 		add_entry("..", "..", 1);
 		for (auto &n : fe_newest_list(newest_days))
@@ -926,6 +949,22 @@ static int load_dir(std::string dir, const char *select_name)
 				if (all) add_entry(dir + "/" + c[0], c[1], 1);
 			}
 		}
+		else if (dir == FE_SET_VIEW)
+		{
+			for (auto &c : categories)
+			{
+				int all;
+				count_in(view_folders, c[0], all);
+				if (all) add_entry(dir + "/" + c[0], c[1], 1);
+			}
+			if (entries.size() < 2) return 0;
+		}
+		else if (starts_with(dir, FE_SET_VIEW "/"))
+		{
+			std::string cat = dir.substr(dir.rfind('/') + 1);
+			for (auto &f : fe_games_folders()) if (f.category == cat) add_entry(FE_VIEW + f.dir, f.name, 0);
+			if (entries.size() < 2) return 0;
+		}
 		else if (starts_with(dir, FE_SET_VISIBLE "/") || starts_with(dir, FE_SET_SCR_SYS "/"))
 		{
 			int vis = starts_with(dir, FE_SET_VISIBLE "/");
@@ -943,6 +982,7 @@ static int load_dir(std::string dir, const char *select_name)
 		entries.clear();
 		add_entry("..", "..", 1);
 		add_entry(FE_SET_VISIBLE, "Visible systems", 1);
+		add_entry(FE_SET_VIEW, "Systems view", 1);
 		add_entry(FE_SET_SCRAPER, "Scraper", 1);
 		add_entry(FE_COINOP, "Coin-Op mode", 0);
 		add_entry(FE_SET_THEMES, "Themes", 1);
@@ -1244,10 +1284,11 @@ static void go_up()
 
 	if (!strcasecmp(parent.c_str(), "games"))
 	{
-		// back to the games by title, or to the list of systems if there are none
+		// back to the games by title, or to the list of systems if there are none (or the system
+		// is shown in its folders)
 		const fe_gsystem *s = fe_group_get(child);
 		const fe_games_folder *f = fe_games_find(child);
-		if (!s || !s->titles.empty()) load_dir(FE_SYS + child, FE_FOLDERS);
+		if (!folder_view(child) && (!s || !s->titles.empty())) load_dir(FE_SYS + child, FE_FOLDERS);
 		else if (f) load_dir(std::string(FE_GAMES "/") + f->category, child.c_str());
 		else load_dir("", 0);
 		return;
@@ -1304,13 +1345,15 @@ static std::string breadcrumb()
 	{
 		std::string out = "Frontier Settings";
 		if (starts_with(cur_dir, FE_SET_VISIBLE)) out += " / Visible systems";
+		if (starts_with(cur_dir, FE_SET_VIEW)) out += " / Systems view";
 		if (starts_with(cur_dir, FE_SET_SCRAPER)) out += " / Scraper";
 		if (cur_dir == FE_SET_THEMES) out += " / Themes";
 		if (cur_dir == FE_SET_SAVER) out += " / Screensaver";
 		if (cur_dir == FE_SET_CRT) out += " / CRT Geometry";
 		if (starts_with(cur_dir, FE_SET_SCR_SYS)) out += " / Systems";
 		size_t pos = cur_dir.rfind('/');
-		if (starts_with(cur_dir, FE_SET_VISIBLE "/") || starts_with(cur_dir, FE_SET_SCR_SYS "/")) out += std::string(" / ") + category_label(cur_dir.substr(pos + 1));
+		if (starts_with(cur_dir, FE_SET_VISIBLE "/") || starts_with(cur_dir, FE_SET_SCR_SYS "/") || starts_with(cur_dir, FE_SET_VIEW "/"))
+			out += std::string(" / ") + category_label(cur_dir.substr(pos + 1));
 		return out;
 	}
 	if (cur_dir == FE_FAV) return "Favorites";
@@ -1783,7 +1826,7 @@ static int view_inst()
 static void load_theme()
 {
 	crt_save(); // settings not written yet
-	std::string root = std::string(getRootDir()) + "/" FE_DIR;
+	std::string root = fe_root() + "/" FE_DIR;
 	std::map<std::string, std::string> ini = fe_read_ini(root + "/frontier.ini");
 	std::string name = ini.count("theme") ? ini["theme"] : std::string("citypop_blue");
 	if (name == "default") name = "simple"; // the old name of the theme
@@ -1851,6 +1894,10 @@ static void load_theme()
 	// "Visible systems"); the scraper of the settings: scrape_systems=, scrape_lang=,
 	// scrape_text=, scrape_media=, scrape_redo=
 	hidden = split_list(ini.count("hidden") ? ini["hidden"] : std::string());
+	// view_folders=C64,PSX / view_titles=Amiga: systems in their folders or by title, not as
+	// systems.ini says (also from "Frontier Settings" > "Systems view")
+	view_folders = split_list(ini.count("view_folders") ? ini["view_folders"] : std::string());
+	view_titles = split_list(ini.count("view_titles") ? ini["view_titles"] : std::string());
 	scr_systems = split_list(ini.count("scrape_systems") ? ini["scrape_systems"] : std::string());
 	scr_lang = ini.count("scrape_lang") && !ini["scrape_lang"].empty() ? ini["scrape_lang"] : std::string("en");
 	scr_text = ini.count("scrape_text") ? atoi(ini["scrape_text"].c_str()) : 1;
@@ -2279,7 +2326,7 @@ static int animating()
 
 static std::string fe_file(const char *name)
 {
-	return std::string(getRootDir()) + "/" FE_DIR "/" + name;
+	return fe_root() + "/" FE_DIR "/" + name;
 }
 
 static int file_there(const std::string &path)
@@ -2439,7 +2486,7 @@ static fe_action coinop_poll(uint32_t &key, int &menu)
 static void coinop_toggle()
 {
 	coinop = !coinop;
-	fe_write_ini_key(std::string(getRootDir()) + "/" FE_DIR "/frontier.ini", "coinop", coinop ? "1" : "0");
+	fe_write_ini_key(fe_root() + "/" FE_DIR "/frontier.ini", "coinop", coinop ? "1" : "0");
 	sync();
 	settings_tags();
 	list_gen++;
@@ -2453,7 +2500,7 @@ static void coinop_toggle()
 // loaded at once
 static void theme_next(int step)
 {
-	std::string dir = std::string(getRootDir()) + "/" FE_DIR "/themes";
+	std::string dir = fe_root() + "/" FE_DIR "/themes";
 	std::vector<std::string> names;
 	DIR *d = opendir(dir.c_str());
 	if (d)
@@ -2480,7 +2527,7 @@ static void theme_next(int step)
 		next = (it == names.begin()) ? names.back() : *(it - 1);
 	}
 
-	fe_write_ini_key(std::string(getRootDir()) + "/" FE_DIR "/frontier.ini", "theme", next);
+	fe_write_ini_key(fe_root() + "/" FE_DIR "/frontier.ini", "theme", next);
 	sync();
 	load_theme();
 	if (!load_dir(cur_dir, FE_THEME)) load_dir("", 0);
@@ -2497,7 +2544,7 @@ static void crt_save()
 {
 	if (!crt_save_ms) return;
 	crt_save_ms = 0;
-	std::string ini = std::string(getRootDir()) + "/" FE_DIR "/frontier.ini";
+	std::string ini = fe_root() + "/" FE_DIR "/frontier.ini";
 	fe_write_ini_key(ini, "crt_width", std::to_string(crt_wpct));
 	fe_write_ini_key(ini, "crt_height", std::to_string(crt_hpct));
 	fe_write_ini_key(ini, "crt_hpos", std::to_string(crt_hpos));
@@ -2522,7 +2569,7 @@ static int next_value(const int *values, int n, int cur, int step)
 // longest one), time per game, transition; written in frontier.ini
 static void saver_setting(const std::string &name, int step)
 {
-	std::string ini = std::string(getRootDir()) + "/" FE_DIR "/frontier.ini";
+	std::string ini = fe_root() + "/" FE_DIR "/frontier.ini";
 	if (name == FE_SAVER)
 	{
 		static const int times[] = { 0, 30, 60, 120, 180, 300, 600, 900, 1200, 1800, 3600 };
@@ -2554,7 +2601,7 @@ static void saver_setting(const std::string &name, int step)
 // the theme loaded again
 static void text_layout_toggle()
 {
-	fe_write_ini_key(std::string(getRootDir()) + "/" FE_DIR "/frontier.ini", "text_layout", text_layout ? "0" : "1");
+	fe_write_ini_key(fe_root() + "/" FE_DIR "/frontier.ini", "text_layout", text_layout ? "0" : "1");
 	sync();
 	load_theme();
 	if (!load_dir(cur_dir, FE_TEXT_LAYOUT)) load_dir("", 0);
@@ -2569,7 +2616,7 @@ static void text_layout_toggle()
 // (also Scripts/frontier_crt, for a CRT alone: there the OSD is seen, Frontier not)
 static void crt_out_toggle()
 {
-	fe_write_ini_key(std::string(getRootDir()) + "/" FE_DIR "/frontier.ini", "crt", crt_enabled ? "0" : "1");
+	fe_write_ini_key(fe_root() + "/" FE_DIR "/frontier.ini", "crt", crt_enabled ? "0" : "1");
 	sync();
 	load_theme();
 	if (!load_dir(cur_dir, FE_CRT_OUT)) load_dir("", 0);
@@ -2586,7 +2633,7 @@ static void recent_setting(int step)
 {
 	static const int counts[] = { 0, 10, 20, 30, 50, 100, 200 };
 	recent_max = next_value(counts, sizeof(counts) / sizeof(counts[0]), recent_max, step);
-	fe_write_ini_key(std::string(getRootDir()) + "/" FE_DIR "/frontier.ini", "recent", std::to_string(recent_max));
+	fe_write_ini_key(fe_root() + "/" FE_DIR "/frontier.ini", "recent", std::to_string(recent_max));
 	sync();
 	settings_tags();
 	list_gen++;
@@ -2600,7 +2647,7 @@ static void recent_setting(int step)
 
 static void ini_key(const char *key, const std::string &value)
 {
-	fe_write_ini_key(std::string(getRootDir()) + "/" FE_DIR "/frontier.ini", key, value);
+	fe_write_ini_key(fe_root() + "/" FE_DIR "/frontier.ini", key, value);
 	sync();
 }
 
@@ -2865,6 +2912,18 @@ static int scrape_setting(const std::string &name, int step)
 		list_set(hidden, system, hide);
 		ini_key("hidden", join_list(hidden));
 		notice(system_label(system) + (hide ? " hidden" : " shown"), 1500);
+	}
+	else if (starts_with(name, FE_VIEW))
+	{
+		// only what differs from systems.ini is written
+		std::string system = name.substr(strlen(FE_VIEW));
+		int folders = !folder_view(system);
+		list_set(view_folders, system, 0);
+		list_set(view_titles, system, 0);
+		if (folders != fe_games_view_folders(system)) list_set(folders ? view_folders : view_titles, system, 1);
+		ini_key("view_folders", join_list(view_folders));
+		ini_key("view_titles", join_list(view_titles));
+		notice(system_label(system) + (folders ? ": folders" : ": by title"), 1500);
 	}
 	else if (starts_with(name, FE_SCR_SYS))
 	{
@@ -3708,15 +3767,15 @@ void frontier_start()
 	{
 		started = 1;
 		fe_update_boot();
-		fe_media_init(std::string(getRootDir()) + "/" FE_DIR);
-		fe_games_load(std::string(getRootDir()) + "/" FE_DIR "/systems.ini");
-		fe_fav_load(std::string(getRootDir()) + "/" FE_DIR "/" FE_FAV_FILE);
-		fe_recent_load(std::string(getRootDir()) + "/" FE_DIR "/" FE_RECENT_FILE);
-		fe_mylists_load(std::string(getRootDir()) + "/" FE_DIR "/" FE_MYLISTS_FILE);
-		fe_scrape_init(getRootDir(), std::string(getRootDir()) + "/" FE_DIR);
+		fe_media_init(fe_root() + "/" FE_DIR);
+		fe_games_load(fe_root() + "/" FE_DIR "/systems.ini");
+		fe_fav_load(fe_root() + "/" FE_DIR "/" FE_FAV_FILE);
+		fe_recent_load(fe_root() + "/" FE_DIR "/" FE_RECENT_FILE);
+		fe_mylists_load(fe_root() + "/" FE_DIR "/" FE_MYLISTS_FILE);
+		fe_scrape_init(getRootDir(), fe_root() + "/" FE_DIR);
 		load_theme();
 		fe_alt_start(getRootDir(), rescan_auto);
-		if (newest_days) fe_newest_scan(getRootDir(), std::string(getRootDir()) + "/" FE_DIR "/" FE_NEWEST_FILE); // the first time: what is there is known
+		if (newest_days) fe_newest_scan(getRootDir(), fe_root() + "/" FE_DIR "/" FE_NEWEST_FILE); // the first time: what is there is known
 
 		// reopen the folder of the last launched title
 		std::string last;
@@ -4107,11 +4166,11 @@ static fe_action poll(uint32_t key, int menu)
 			// (until the next start, as with rescan=auto)
 			fe_media_reset();
 			fe_group_reset();
-			fe_games_load(std::string(getRootDir()) + "/" FE_DIR "/systems.ini");
+			fe_games_load(fe_root() + "/" FE_DIR "/systems.ini");
 			fe_games_rescan();
-			fe_fav_load(std::string(getRootDir()) + "/" FE_DIR "/" FE_FAV_FILE);
-			fe_recent_load(std::string(getRootDir()) + "/" FE_DIR "/" FE_RECENT_FILE);
-			fe_mylists_load(std::string(getRootDir()) + "/" FE_DIR "/" FE_MYLISTS_FILE);
+			fe_fav_load(fe_root() + "/" FE_DIR "/" FE_FAV_FILE);
+			fe_recent_load(fe_root() + "/" FE_DIR "/" FE_RECENT_FILE);
+			fe_mylists_load(fe_root() + "/" FE_DIR "/" FE_MYLISTS_FILE);
 			fe_lists_reset();
 			load_theme();
 			fe_group_manual(0);
@@ -4311,7 +4370,7 @@ void frontier_panic_poll()
 	static int on = -1;
 	if (on < 0)
 	{
-		std::map<std::string, std::string> ini = fe_read_ini(std::string(getRootDir()) + "/" FE_DIR "/frontier.ini");
+		std::map<std::string, std::string> ini = fe_read_ini(fe_root() + "/" FE_DIR "/frontier.ini");
 		on = ini.count("panic_combo") ? atoi(ini["panic_combo"].c_str()) : 1;
 	}
 	if (!on) return;

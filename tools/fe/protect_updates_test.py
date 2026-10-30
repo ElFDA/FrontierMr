@@ -157,6 +157,29 @@ class ProtectionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             protect.protect_store(b'{"dbs":{"distribution_mister":{"files":[]}}}', False)
 
+    def test_default_filter_of_the_db9_database_is_kept(self):
+        # MiSTer-DB9's database leaves out its unstable cores by itself (default_options), but only
+        # while its section has no filter: the filter written here must keep that
+        url = b'db_url = https://raw.githubusercontent.com/MiSTer-DB9/Distribution_MiSTer/main/dbencc.json.zip\n'
+        ini = b'[distribution_mister]\n' + url
+        full = b'[distribution_mister]\n' + url + b'filter = [MiSTer] !unstable !jtbeta !dualsdram !misterfirmware\n'
+        self.assertEqual(full, protect.protect_ini(ini))
+        self.assertEqual(full, protect.protect_ini(full))
+        # the filter of older Frontier versions is completed (also by --repair at boot)
+        for old in (b'filter = [MiSTer] !misterfirmware\n', b'filter = !misterfirmware !menu\n'):
+            self.assertEqual(full, protect.protect_ini(b'[distribution_mister]\n' + url + old))
+        # uninstall: no filter line, the database's default is back
+        self.assertEqual(ini, protect.protect_ini(full, disable=True))
+        # a filter of the user's own is only given !misterfirmware
+        own = b'[distribution_mister]\n' + url + b'filter = !unstable unstable-saturn\n'
+        self.assertEqual(own.replace(b'saturn\n', b'saturn !misterfirmware\n'), protect.protect_ini(own))
+        # a filter in [MiSTer] replaces the default of the database: nothing to keep
+        mister = b'[MiSTer]\nfilter = console\n\n[distribution_mister]\n' + url
+        self.assertIn(b'filter = [MiSTer] !misterfirmware\n', protect.protect_ini(mister))
+        # the official database has no default filter
+        official = b'[distribution_mister]\ndb_url = ' + protect.DEFAULT_DB.encode() + b'\n'
+        self.assertIn(b'filter = [MiSTer] !misterfirmware\n', protect.protect_ini(official))
+
     def test_updater_process_detection_ignores_archive_arguments_to_other_scripts(self):
         entry = Mock()
         entry.parent.name = '999999'

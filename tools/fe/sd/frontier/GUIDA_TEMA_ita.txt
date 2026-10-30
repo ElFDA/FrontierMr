@@ -27,11 +27,23 @@ multipli di 3.
 
 
 PASSO 0 - COSA SERVE
-  - un PC con Chrome o Edge (salvano direttamente nella cartella; con altri
-    browser si usa "Download .ini" e si copiano i file a mano)
-  - l'editor: il file theme_editor.html dalla pagina Releases di FrontierMr
-    (https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html),
-    si apre con un doppio clic, funziona senza internet
+  - l'editor, uno dei due (fanno la stessa cosa, senza internet), dalla
+    pagina Releases di FrontierMr (https://github.com/ElFDA/FrontierMr/releases/latest):
+    - il programma FrontierThemeEditor per Windows, macOS (Apple Silicon) o
+      Linux, senza niente da installare (vedi docs/THEME_EDITOR_ita.md per il
+      primo avvio);
+    - oppure la pagina web theme_editor.html, aperta con Chrome o Edge con un
+      doppio clic (salvano direttamente nella cartella; con altri browser si
+      usa "Download .ini" e si copiano i file a mano)
+  I passi citano i pulsanti della pagina web; nel programma (in italiano) sono:
+    Open folder      File > Apri cartella (o trascinare la cartella sulla finestra)
+    Save to folder   File > Salva (Ctrl+S)
+    Variant          16:9 | 4:3 e il menu della schermata nella barra in alto
+    Make 4:3         Crea 4:3 nella barra in alto (anche nel menu Variante)
+    Make detail      Variante > Crea dettaglio
+    Import .ini      File > Carica .ini
+    240p preview     Anteprima 240p nella barra in alto
+    Delete           il tasto Canc (Modifica > Elimina livello)
   - le immagini e i font di City Pop: da tools/fe/sd/frontier/themes/
     oppure da /media/fat/frontier/themes/ sul MiSTer
 

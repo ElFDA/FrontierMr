@@ -4,6 +4,48 @@ All the releases of Frontier, newest first.
 Each release is on the [Releases page](https://github.com/ElFDA/FrontierMr/releases); the text of
 a release is its entry here.
 
+## Unreleased
+* **The theme editor as a program for Windows, macOS and Linux**: Frontier MRTE (`tools/fe/theme_editor.py`)
+  is attached to every release as `FrontierThemeEditor-windows.exe`, `FrontierThemeEditor-macos.zip` (Apple
+  Silicon) and `FrontierThemeEditor-linux.tar.gz`, with nothing to install: made by PyInstaller on GitHub
+  (`.github/workflows/theme_editor.yml`). See `docs/THEME_EDITOR.md`. Version 0.3.1 adds **Make 4:3** to the
+  top bar and **Make 4:3**, **Make detail**, **Make screensaver** to the Variant menu, as in the web editor;
+  the theme guides say which menu has each button of the web page.
+* **Pictures without ScreenScraper for TOSEC names and hacks**: libretro pictures are found by the name of the
+  file as before, or else by the title of the game (the list of the pictures of the system is read once and kept
+  30 days), choosing the one of the same year and publisher or of the preferred region: TOSEC computer games
+  (Amiga, C64, Spectrum, CPC, Atari ST, MSX...) and console hacks get box art, screenshots and title screens
+  without a ScreenScraper account. 20 more systems have their libretro pictures (Nintendo DS, PC/DOS cores, C16,
+  ZX81, PET, Thomson, CD-i...).
+* **TOSEC names are one game per title**: `Predator 2 (1991)(ImageWorks)(Disk 1 of 2)[cr CPY]`, its disk 2 and
+  the other dumps are one game, `Predator 2`, which starts the first disk of the cleanest copy (in the lists by
+  title and in the scraper, which asks ScreenScraper once per game instead of once per file).
+* **The scraper reads the zip files with free names inside** (TOSEC collections like `VIC20 Games [TAP]
+  (TOSEC...).zip`), whose games are seen in the folders view, up to 3000 per system (a bigger collection is
+  left out, with a line in the log).
+* **The scraper knows 74 more systems**: many computers (C16, BBC Micro, Oric, MSX variants, TI-99/4A, ZX81,
+  SAM Coupé, PC/DOS cores, Macintosh...), handhelds and consoles (Nintendo DS, Game & Watch, Mega Duck, CD-i,
+  Super Cassette Vision...) and the 2P/HD variants of cores were skipped, as they had no ScreenScraper system:
+  only the systems with No-Intro sets got data and pictures. 139 of the 195 folders of `systems.ini` now have
+  one; the others are not on ScreenScraper.
+* **Computers open in their folders**: C64, Amiga, Spectrum, MSX and the other systems of the Computer
+  category open straight in their real folders, as the MiSTer shows them (a zip opens as a folder), instead
+  of one list of all their files: their collections have free names and folders that mean something. Consoles
+  and handhelds stay by title. **Frontier Settings → Systems view** switches each system between Titles and
+  Folders (`view_folders=` / `view_titles=` in `frontier.ini`, `view=` in `systems.ini` for the default).
+* **MiSTer-DB9: no more unstable cores from update_all**: the filter Frontier writes in `downloader.ini`
+  (`[MiSTer] !misterfirmware`) took the place of the default filter of MiSTer-DB9's database
+  (`!unstable !jtbeta !dualsdram`), so update_all also downloaded the `_Unstable` cores. The filter now keeps
+  that default; on a MiSTer which has the older filter it is completed at the next start, and the next
+  update_all removes the unstable cores it had added. The official database has no default filter: nothing
+  changes there.
+* **Games on USB disks without a `games` folder**: the system folders right on a USB disk
+  (`/media/usb0/SNES`) and on the SD card (`/media/fat/SNES`) are read too, as the MiSTer's own file
+  browser does; before, only `/media/usbN/games/SNES` was. The scraper reads the same places.
+* **Storage: USB** in the MiSTer's OSD: Frontier keeps using its folder on the SD card
+  (`/media/fat/frontier`, where the installer puts it) and also lists the games of `/media/fat/games`;
+  before, it looked for its themes and settings on the USB disk and found nothing.
+
 ## v2026.10.27
 * **F12 -> Cores inside a game lists all the cores again**: it opened the folder of the launcher MGL that
   Frontier makes in `frontier/launch/`, which holds only the game just started, so only that core was

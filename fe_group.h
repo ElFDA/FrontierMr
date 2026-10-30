@@ -27,6 +27,7 @@ struct fe_grom
 	int rev = 0;        // revision (Rev 1, Rev A, v1.1)
 	int alt = 0;        // (Alt), romsets: (set 2)...
 	int order = 0;      // romsets: zip after .neo, .neo without setname last
+	int dump = 0;       // TOSEC: disk 2 and later after the first one, then the copies with more [tags] (cracks, trainers)
 	std::string label;  // shown in the detail view if not empty (romsets: "3 Count Bout (3countb.zip)")
 };
 

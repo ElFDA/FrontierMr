@@ -81,7 +81,10 @@ No-Intro style region (hacks, translations, `Crash Bandicoot.chd`...) the file n
 title, cleaned: `_` as spaces, no `[!]`, no disc number (`Spyro (Disc 1)` and `Spyro (Disc 2)`
 are one game, `Spyro`, and the discs are its versions in the details). The GoodTools country
 codes `(U)`, `(E)`, `(J)`, `(UE)`... count as regions, so `Sonic (U)` and `Sonic (E)` are one
-title with two versions. BIOS files named `[BIOS] ...` are not listed.
+title with two versions. A [TOSEC](https://www.tosecdev.org) name counts only for its title:
+`Predator 2 (1991)(ImageWorks)(Disk 1 of 2)[cr CPY]`, `(Disk 2 of 2)` and the other dumps are one game,
+`Predator 2`, which starts the first disk of the copy with the fewest `[...]` tags (cracks, trainers,
+alternatives). BIOS files named `[BIOS] ...` are not listed.
 
 Two things are left out of the lists: a zip with free names inside (a zip of C64 games
 named `Spy vs Spy.crt`: only the roms with a region are read from zip files) and the
@@ -89,6 +92,12 @@ folders named `Extra` (unlicensed games, prototypes, hacks...; other names can b
 with `exclude_dirs=` in `frontier.ini`). `folders=1` in `frontier.ini` adds **Folders**
 at the top of each system: the real folders of `games/` as they are, where a zip opens as
 a folder. The folders are also in **MiSTer** from the main screen.
+
+The computers (category Computer: C64, Amiga, Spectrum, MSX...) open straight in their real
+folders, not by title: their collections have free names and folders which mean something.
+Each system can be switched between the two in *Frontier Settings → Systems view*
+(`view_folders=` and `view_titles=` in `frontier.ini`; `view=folders|titles` in `systems.ini`
+changes the default).
 
 ## Cores with several configurations (Amiga)
 

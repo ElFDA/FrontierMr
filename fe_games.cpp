@@ -35,6 +35,7 @@ struct sysdef
 	std::string autorun; // a PRG of frontier/ loaded after a disk image (C64: types LOAD and RUN), with the first 'f' slot of prg
 	int reset = 0;     // seconds: <reset> after the disk image is mounted (the disk boots at the reset)
 	int romsets = 0;   // Neo Geo: zip files and folders are romsets (romsets.xml), loaded by the first slot
+	int view = -1;     // view=: 1 folders, 0 by title, -1 by the category (the computers in folders)
 	std::vector<std::string> folders;
 	std::vector<std::string> launchers; // MGLs of the root which start a configuration of the core by themselves
 	std::vector<slot> slots;
@@ -124,11 +125,24 @@ static std::vector<std::string> game_roots()
 
 	std::vector<std::string> seen = { real_path(roots[0]) };
 	std::vector<std::string> candidates;
-	for (int i = 0; i < 8; i++) candidates.push_back(FE_MEDIA "/usb" + std::to_string(i) + "/games");
+	for (int i = 0; i < 8; i++)
+	{
+		std::string usb = FE_MEDIA "/usb" + std::to_string(i);
+		candidates.push_back(usb + "/games");
+		candidates.push_back(usb); // the system folders right on the disk (/media/usb0/SNES)
+	}
 	candidates.push_back(FE_MEDIA "/network/games");
 	candidates.push_back(FE_MEDIA "/network");
 	candidates.push_back(root + "/cifs/games");
 	candidates.push_back(root + "/cifs");
+	candidates.push_back(root);
+	// "Storage: USB": the SD card too
+	std::string sd = getStorageDir(0);
+	if (real_path(sd) != real_path(root))
+	{
+		candidates.push_back(sd + "/games");
+		candidates.push_back(sd);
+	}
 	for (auto &c : candidates)
 	{
 		if (!is_directory(c)) continue;
@@ -138,6 +152,13 @@ static std::vector<std::string> game_roots()
 		roots.push_back(c);
 	}
 	return roots;
+}
+
+std::string fe_root()
+{
+	std::string root = getRootDir(), sd = getStorageDir(0);
+	if (!is_directory(root + "/frontier") && is_directory(sd + "/frontier")) return sd;
+	return root;
 }
 
 void fe_games_merge(int on)
@@ -332,6 +353,8 @@ void fe_games_load(const std::string &ini)
 		d.romsets = s.get_int("romsets", 0);
 		d.reset = s.get_int("reset", 0);
 		d.autorun = s.get("autorun");
+		std::string view = lower(s.get("view"));
+		d.view = view == "folders" ? 1 : view == "titles" ? 0 : -1;
 		d.folders = split(s.get("folders"), "|");
 		d.launchers = split(s.get("launchers"), "|");
 
@@ -394,7 +417,7 @@ void fe_games_rescan()
 // frontier/.cache/folders.txt: "FEF1\t<systems.ini stamp>", then "<dir>\t<name>\t<id>\t<category>"
 static int read_folders_cache()
 {
-	FILE *fp = fopen((std::string(getRootDir()) + "/" FE_FOLDERS_CACHE).c_str(), "r");
+	FILE *fp = fopen((fe_root() + "/" FE_FOLDERS_CACHE).c_str(), "r");
 	if (!fp) return 0;
 	char line[1024];
 	int ok = fgets(line, sizeof(line), fp) && std::string(line, strcspn(line, "\r\n")) == "FEF1\t" + ini_stamp;
@@ -422,8 +445,8 @@ static int read_folders_cache()
 
 static void write_folders_cache()
 {
-	std::string path = std::string(getRootDir()) + "/" FE_FOLDERS_CACHE;
-	mkdir((std::string(getRootDir()) + "/frontier/.cache").c_str(), 0755);
+	std::string path = fe_root() + "/" FE_FOLDERS_CACHE;
+	mkdir((fe_root() + "/frontier/.cache").c_str(), 0755);
 	FILE *fp = fopen((path + ".tmp").c_str(), "w");
 	if (!fp) return;
 	fprintf(fp, "FEF1\t%s\n", ini_stamp.c_str());
@@ -557,6 +580,14 @@ const fe_games_folder *fe_games_find(const std::string &dir)
 	return 0;
 }
 
+int fe_games_view_folders(const std::string &dir)
+{
+	std::vector<const sysdef *> sys = systems_of(dir);
+	if (sys.empty()) return 0;
+	if (sys[0]->view >= 0) return sys[0]->view;
+	return sys[0]->category == "Computer";
+}
+
 std::string fe_games_exts(const std::string &dir)
 {
 	std::vector<std::string> list;
@@ -666,12 +697,12 @@ std::string fe_games_mgl(const std::string &rom)
 	}
 
 	std::string rel = std::string(FE_LAUNCH_DIR) + "/" + dir;
-	std::string path = std::string(getRootDir()) + "/" + rel;
-	mkdir((std::string(getRootDir()) + "/" FE_LAUNCH_DIR).c_str(), 0777);
+	std::string path = fe_root() + "/" + rel;
+	mkdir((fe_root() + "/" FE_LAUNCH_DIR).c_str(), 0777);
 	mkdir(path.c_str(), 0777);
 
 	rel += "/" + file.substr(0, dot) + ".mgl";
-	path = std::string(getRootDir()) + "/" + rel;
+	path = fe_root() + "/" + rel;
 
 	FILE *fp = fopen(path.c_str(), "w");
 	if (!fp)
@@ -692,7 +723,7 @@ std::string fe_games_mgl(const std::string &rom)
 		{
 			if (x.type != 'f' || std::find(x.exts.begin(), x.exts.end(), "prg") == x.exts.end()) continue;
 			fprintf(fp, "\t<file delay=\"0\" type=\"f\" index=\"%d\" path=\"%s\"/>\n", x.index,
-				xml_escape(std::string(getRootDir()) + "/" + sys->autorun).c_str());
+				xml_escape(fe_root() + "/" + sys->autorun).c_str());
 			break;
 		}
 	}
@@ -701,5 +732,5 @@ std::string fe_games_mgl(const std::string &rom)
 	fclose(fp);
 
 	fprintf(stderr, "frontier: %s -> %s (%s)\n", rom.c_str(), rel.c_str(), sys->id.c_str());
-	return rel;
+	return fe_root() == getRootDir() ? rel : path; // "Storage: USB": the MGL is on the SD card
 }

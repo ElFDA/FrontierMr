@@ -196,6 +196,7 @@ static bool better(const fe_grom &a, const fe_grom &b)
 	if (a.rev != b.rev) return a.rev > b.rev;
 	if (a.alt != b.alt) return a.alt < b.alt;
 	if (a.order != b.order) return a.order < b.order;
+	if (a.dump != b.dump) return a.dump < b.dump;
 	return fe_natural_cmp(a.name, b.name) < 0;
 }
 
@@ -397,13 +398,52 @@ static std::string disc_base(const std::string &stem, int &tagged)
 	return lower(disc_strip(stem, tagged));
 }
 
+// TOSEC: "Predator 2 (1991)(ImageWorks)(M3)(Disk 1 of 2)[cr CPY]" -> "Predator 2": the date and the
+// publisher, each in brackets, one after the other after the title; "" if it isn't a TOSEC name
+static std::string tosec_title(const std::string &s)
+{
+	auto dx = [](char c) { return isdigit((unsigned char)c) || c == 'x' || c == '?'; };
+	for (size_t p = s.find(" ("); p != std::string::npos; p = s.find(" (", p + 1))
+	{
+		size_t i = p + 2;
+		if (i + 4 > s.size() || (s.compare(i, 2, "19") && s.compare(i, 2, "20")) || !dx(s[i + 2]) || !dx(s[i + 3])) continue;
+		size_t j = i + 4;
+		for (int n = 0; n < 2 && j + 2 < s.size() && s[j] == '-' && dx(s[j + 1]) && dx(s[j + 2]); n++) j += 3;
+		if (s.compare(j, 2, ")(") || s.find(')', j + 2) == std::string::npos) continue;
+		std::string title = s.substr(0, p);
+		size_t q = title.find(" (");
+		if (q != std::string::npos) title.erase(q);
+		while (!title.empty() && title.back() == ' ') title.pop_back();
+		return title;
+	}
+	return "";
+}
+
+// TOSEC copies of a game: the first disk first, then the clean dumps (fewer [cr], [t], [a]...)
+static int tosec_dump(const std::string &stem)
+{
+	if (tosec_title(stem).empty()) return 0;
+	int n = 0;
+	std::string low = lower(stem);
+	for (size_t p = 0; (p = low.find('(', p)) != std::string::npos; p++)
+	{
+		size_t w = disc_word(low, p + 1);
+		if (w && isdigit((unsigned char)low[p + 1 + w]) && atoi(low.c_str() + p + 1 + w) > 1) n += 1000;
+	}
+	for (char c : stem) n += c == '[';
+	return n;
+}
+
 // the title of a file without a No-Intro name: no date in front, "_" are spaces, no disc number
-// (the discs of a game are its versions), no "[!]"
+// (the discs of a game are its versions), no "[!]"; of a TOSEC name only the title (its disks,
+// versions, cracks and translations are the versions)
 std::string fe_clean_title(const std::string &stem)
 {
 	std::string s = stem.substr(date_len(stem));
 	for (auto &c : s) if (c == '_') c = ' ';
 	for (size_t p; (p = s.find("[!]")) != std::string::npos;) s.erase(p, 3);
+	std::string tosec = tosec_title(s);
+	if (!tosec.empty()) return tosec;
 	int tagged;
 	s = disc_strip(s, tagged);
 	return s.empty() ? stem : s;
@@ -644,7 +684,7 @@ static void walk(const std::string &phys, const std::string &rel, int depth, con
 static std::map<std::string, std::string> read_groups(const std::string &dir)
 {
 	std::map<std::string, std::string> out;
-	std::string path = std::string(getRootDir()) + "/frontier/gamelists/" + lower(dir) + "/groups.txt";
+	std::string path = fe_root() + "/frontier/gamelists/" + lower(dir) + "/groups.txt";
 	FILE *fp = fopen(path.c_str(), "r");
 	if (!fp) return out;
 	char line[1024];
@@ -760,6 +800,7 @@ static void build(fe_gsystem &s, const std::string &dir, const std::vector<std::
 			if (title.empty()) continue;
 			r = fe_grom();
 			r.rank = regions.size();
+			r.dump = tosec_dump(name.substr(date_len(name)));
 		}
 		r.path = p;
 		r.name = name;
@@ -858,7 +899,7 @@ static std::vector<result> done;
 
 static std::string cache_path(const std::string &dir)
 {
-	return std::string(getRootDir()) + "/frontier/.cache/games_" + dir + ".txt";
+	return fe_root() + "/frontier/.cache/games_" + dir + ".txt";
 }
 
 // first line of the cache: format (N: romsets with the .neo files without setname and
@@ -888,7 +929,7 @@ static int read_cache(const std::string &dir, std::vector<std::string> &paths)
 static void write_cache(const std::string &dir, const std::vector<std::string> &paths)
 {
 	std::string path = cache_path(dir);
-	mkdir((std::string(getRootDir()) + "/frontier/.cache").c_str(), 0755);
+	mkdir((fe_root() + "/frontier/.cache").c_str(), 0755);
 	std::string tmp = path + ".tmp";
 	FILE *fp = fopen(tmp.c_str(), "w");
 	if (!fp) return;

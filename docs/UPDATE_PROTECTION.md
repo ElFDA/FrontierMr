@@ -55,7 +55,13 @@ Frontier owns no official path: its firmware lives in `frontier/bin/`
 * **Filter**: `!misterfirmware` in `[distribution_mister]`, with the official
   MiSTer forgotten in Downloader's index (so that it is not deleted), only
   avoids downloading the official binary for nothing. If it is lost, the guard
-  undoes the update at the next reboot.
+  undoes the update at the next reboot. A database can have a default filter
+  of its own, which Downloader uses only while its section has no `filter`:
+  MiSTer-DB9's leaves out its unstable cores (`!unstable !jtbeta !dualsdram`).
+  For it the filter written is `[MiSTer] !unstable !jtbeta !dualsdram
+  !misterfirmware`, unless `[MiSTer]` has a filter (that one replaces the
+  default); the self repair completes the `[MiSTer] !misterfirmware` of older
+  versions, and Downloader then removes the unstable cores it had added.
 * **Frontier's updates**: `/media/fat/downloader_frontiermr.ini` (a Downloader
   drop-in, copied from `frontier/downloader_frontiermr.ini`) adds the database
   `frontiermr` (`tools/fe/make_db.py`). Its only archive is the ZIP of the

@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 #include "fe_alt.h"
+#include "fe_games.h"
 
 #define ALT_DIR   "_Arcade/_alternatives"
 #define ALT_CACHE "frontier/.cache/alternatives.txt"
@@ -113,7 +114,7 @@ static std::vector<std::string> mra_keys(const std::string &path, std::string *s
 
 static void load_cache(std::map<std::string, alt_file> &old)
 {
-	FILE *fp = fopen((root + "/" ALT_CACHE).c_str(), "r");
+	FILE *fp = fopen((fe_root() + "/" ALT_CACHE).c_str(), "r");
 	if (!fp) return;
 	char line[4096];
 	while (fgets(line, sizeof(line), fp))
@@ -137,8 +138,8 @@ static void load_cache(std::map<std::string, alt_file> &old)
 
 static void save_cache(const std::vector<alt_file> &list)
 {
-	mkdir((root + "/frontier/.cache").c_str(), 0755);
-	std::string name = root + "/" ALT_CACHE;
+	mkdir((fe_root() + "/frontier/.cache").c_str(), 0755);
+	std::string name = fe_root() + "/" ALT_CACHE;
 	FILE *fp = fopen((name + ".tmp").c_str(), "w");
 	if (!fp) return;
 	for (auto &f : list)

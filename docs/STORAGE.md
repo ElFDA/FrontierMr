@@ -11,9 +11,10 @@ In this order; for the same file in two places the first one wins:
 | Place | What it is |
 |---|---|
 | `/media/fat/games` | the SD card, or the disk it links to |
-| `/media/usb0/games` ... `/media/usb7/games` | the USB disks, each with a `games` folder |
+| `/media/usb0/games` ... `/media/usb7/games` and `/media/usb0` ... `/media/usb7` | the USB disks: the system folders in a `games` folder, or right on the disk (`/media/usb0/SNES`, as the MiSTer's own browser reads them too) |
 | `/media/network/games` and `/media/network` | network shares |
 | `/media/fat/cifs/games` and `/media/fat/cifs` | CIFS shares mounted by the `cifs_mount.sh` script (its shares can hold the system folders directly: `Amiga`, `C64`, `NES`...) |
+| `/media/fat` | the old layout with the system folders right on the SD card (`/media/fat/SNES`) |
 
 A disk which `games` already links to is not read twice. In each place the system
 folder is the usual one (`games/PSX`, `games/SNES`...); the case doesn't matter
@@ -39,4 +40,8 @@ folder is the usual one (`games/PSX`, `games/SNES`...); the case doesn't matter
   (see *Updating the lists* in `README.txt`).
 * A network share which is slow or switched off makes the lists slow: unmount it
   (`cifs_umount.sh`) or set `merge_games=0`, which reads only `/media/fat/games`.
-* System folders right in `/media/usbN` (without a `games` folder) are not read.
+* **Storage: USB** in the MiSTer's OSD (System Settings) makes the first USB disk the root:
+  `/media/usb0` takes the place of `/media/fat` in the table above, and the SD card is read
+  last (`/media/fat/games`, then `/media/fat`). Frontier's own folder stays on the SD card
+  (`/media/fat/frontier`, where the installer puts it), unless the USB disk has a `frontier`
+  folder of its own.

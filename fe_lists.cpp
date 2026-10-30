@@ -172,7 +172,7 @@ static void read_index()
 
 	struct timespec t0, t1;
 	clock_gettime(CLOCK_MONOTONIC, &t0);
-	FILE *fp = fopen((std::string(getRootDir()) + "/" INDEX_FILE).c_str(), "r");
+	FILE *fp = fopen((fe_root() + "/" INDEX_FILE).c_str(), "r");
 	if (!fp) return;
 	char *line = 0;
 	size_t size = 0;
@@ -336,7 +336,7 @@ static int filter_read = 0;
 
 static std::string filter_file()
 {
-	return std::string(getRootDir()) + "/" FILTER_FILE;
+	return fe_root() + "/" FILTER_FILE;
 }
 
 static void read_filter()

@@ -29,11 +29,17 @@ void fe_games_wait(int seconds);
 // the folders are read again at the next fe_games_folders()
 void fe_games_rescan();
 
+// the storage with Frontier's folder (frontier/): the root of MiSTer, or the SD card when the
+// root is a USB disk without it ("Storage: USB" in the OSD; the installers put frontier/ on the SD card)
+std::string fe_root();
+
 // merge_games=1 (default): the games of the same system on more storages are one list.
-// The roots, in this order (the first one wins when a file is in two): /media/fat/games
-// (or the USB disk it links to), /media/usb0..7/games, /media/network/games and /media/network,
-// /media/fat/cifs/games and /media/fat/cifs (CIFS shares). A system folder is found in each root
-// whatever its case ("PSX" and "psx"). The roots are looked for at every call.
+// The roots, in this order (the first one wins when a file is in two): <root>/games (the SD
+// card or the USB disk it links to), /media/usb0..7/games and /media/usb0..7, /media/network/games
+// and /media/network, <root>/cifs/games and <root>/cifs (CIFS shares), <root>; with "Storage: USB"
+// also /media/fat/games and /media/fat. The roots without games/ are the old layout which MiSTer's
+// browser reads too (/media/usb0/SNES). A system folder is found in each root whatever its case
+// ("PSX" and "psx"). The roots are looked for at every call.
 void fe_games_merge(int on);
 // the existing folders (absolute paths, the first root first) of a path "games/<folder>[/sub]",
 // empty if none; without merge_games only the first root
@@ -42,6 +48,10 @@ std::vector<std::string> fe_games_dirs(const std::string &rel);
 // has it; <root>/<rel> if none. Other paths: <root>/<rel>
 std::string fe_games_file(const std::string &rel);
 const fe_games_folder *fe_games_find(const std::string &dir);
+
+// the default view of a games/ folder: 1 its real folders (the computers, whose collections have
+// free names), 0 the games by title (view= in systems.ini; frontier.ini can change it)
+int fe_games_view_folders(const std::string &dir);
 
 // extensions for ScanDirectory ("NESMGL") of a games/ folder
 std::string fe_games_exts(const std::string &dir);
@@ -62,7 +72,7 @@ int fe_games_romsets(const std::string &dir);
 
 // writes frontier/launch/<dir>/<name>.mgl for a file (path relative to the
 // root, e.g. "games/NES/Game.nes"); returns the MGL path relative to the
-// root, "" if no system can load the file
+// root (absolute when frontier/ is not on the root, see fe_root), "" if no system can load the file
 std::string fe_games_mgl(const std::string &rom);
 
 #endif

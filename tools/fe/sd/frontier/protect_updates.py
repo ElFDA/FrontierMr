@@ -8,7 +8,8 @@ frontier/bin/MiSTer to the root. This script sets up everything around it:
 - '!misterfirmware' in the filter of [distribution_mister], and the official
   MiSTer forgotten in Downloader's index (with the filter alone Downloader would
   delete it); '!menu' of older Frontier versions is removed, so the official
-  menu.rbf in the root updates again;
+  menu.rbf in the root updates again; the default filter of the database
+  (MiSTer-DB9: '!unstable !jtbeta !dualsdram') is kept in it;
 - the Downloader drop-in of Frontier's database (frontier/downloader_frontiermr.ini
   copied to the root), so update_all also updates Frontier.
 --disable undoes all of it for frontier_uninstall.
@@ -31,6 +32,10 @@ TAGS = ('!misterfirmware',)
 LEGACY_TAGS = ('!menu',)  # Frontier's menu.rbf now lives in frontier/bin
 CACHE = Path('Scripts/.config/downloader')
 DEFAULT_DB = 'https://raw.githubusercontent.com/MiSTer-devel/Distribution_MiSTer/main/db.json.zip'
+# the filter a distribution database sets for itself (db.json "default_options"). Downloader uses it
+# only while its section of downloader.ini has no filter (and [MiSTer] has none): the filter written
+# here must keep it, or the cores it leaves out are downloaded ("[MiSTer]" is only the filter of [MiSTer])
+DB_DEFAULT_FILTERS = (('/mister-db9/', '!unstable !jtbeta !dualsdram'),)  # MiSTer-DB9's dbencc.json.zip
 FIRMWARE = Path('frontier/bin/MiSTer')
 UNINSTALLED = Path('frontier/uninstalled')
 STARTUP = Path('linux/user-startup.sh')
@@ -45,12 +50,19 @@ def _norm(tag):
     return tag.lower().replace('_', '').replace('-', '')
 
 
+def db_default_filter(db_url):
+    url = db_url.strip().strip('\"\'').lower()
+    return next((terms.split() for key, terms in DB_DEFAULT_FILTERS if key in url), [])
+
+
 def protect_ini(data, root=Path('/media/fat'), disable=False):
     text = data.decode('utf-8-sig')
     parser = configparser.ConfigParser(interpolation=None, inline_comment_prefixes=(';', '#'))
     parser.read_string(text)
+    global_filter = False
     for section in parser.sections():
         if section.lower() == 'mister':
+            global_filter = parser.has_option(section, 'filter')
             system_path = parser.get(section, 'base_system_path', fallback='/media/fat').strip().strip('\"\'')
             # update_all writes '/media/fat/' (trailing slash)
             if os.path.normpath(system_path) not in ('/media/fat', str(root)):
@@ -66,13 +78,25 @@ def protect_ini(data, root=Path('/media/fat'), disable=False):
         return (text.rstrip() + '\n\n[distribution_mister]\ndb_url = ' + DEFAULT_DB +
                 '\nfilter = [MiSTer] ' + ' '.join(TAGS) + '\n').encode('utf-8')
     section = sections[0]
-    value = parser.get(section, 'filter', fallback='' if disable else '[MiSTer]').strip().strip('\"\'')
+    # the default filter of the database counts only while [MiSTer] has no filter
+    default = [] if global_filter else db_default_filter(parser.get(section, 'db_url', fallback=''))
+    value = parser.get(section, 'filter', fallback='' if disable else ' '.join(['[MiSTer]'] + default))
+    value = value.strip().strip('\"\'')
     if '\n' in value:
         raise ValueError('Multiline filters are not supported; put this filter on one line.')
     tokens = value.split()
     remove = {_norm(t) for t in LEGACY_TAGS + (TAGS if disable else ())}
     remaining = [t for t in tokens if _norm(t) not in remove]
-    if not disable:
+    ours = {'[mister]'} | {_norm(t) for t in TAGS + LEGACY_TAGS}
+    if disable:
+        # only what Frontier wrote is left: no filter line, the database's default filter is back
+        if default and {_norm(t) for t in remaining} <= {'[mister]'} | {_norm(t) for t in default}:
+            remaining = []
+    else:
+        if default and tokens and {_norm(t) for t in tokens} <= ours:
+            # written by Frontier before it kept the default filter: put it back
+            remaining = [t for t in remaining if _norm(t) == '[mister]'] or ['[MiSTer]']
+            remaining += default
         remaining += [t for t in TAGS if _norm(t) not in {_norm(x) for x in remaining}]
     if remaining == tokens:
         return data

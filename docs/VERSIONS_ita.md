@@ -84,7 +84,10 @@ alla No-Intro (hack, traduzioni, `Crash Bandicoot.chd`...) il titolo è il nome 
 ripulito: `_` come spazi, senza `[!]`, senza il numero del disco (`Spyro (Disc 1)` e
 `Spyro (Disc 2)` sono un solo gioco, `Spyro`, e i dischi sono le sue versioni nei dettagli). I
 codici dei paesi di GoodTools `(U)`, `(E)`, `(J)`, `(UE)`... contano come regioni, quindi
-`Sonic (U)` e `Sonic (E)` sono un solo titolo con due versioni. I BIOS chiamati `[BIOS] ...`
+`Sonic (U)` e `Sonic (E)` sono un solo titolo con due versioni. Di un nome
+[TOSEC](https://www.tosecdev.org) conta solo il titolo: `Predator 2 (1991)(ImageWorks)(Disk 1 of 2)[cr CPY]`,
+`(Disk 2 of 2)` e le altre copie sono un solo gioco, `Predator 2`, che avvia il primo disco della copia
+con meno tag `[...]` (crack, trainer, alternative). I BIOS chiamati `[BIOS] ...`
 non si elencano.
 
 Restano fuori dagli elenchi due cose: uno zip con nomi liberi dentro (uno zip di giochi C64
@@ -93,6 +96,12 @@ chiamate `Extra` (giochi senza licenza, prototipi, hack...; altri nomi si aggiun
 `exclude_dirs=` in `frontier.ini`). `folders=1` in `frontier.ini` aggiunge **Folders** in
 cima a ogni sistema: le cartelle vere di `games/` come sono, dove uno zip si apre come una
 cartella. Le cartelle si vedono anche in **MiSTer**, dalla prima schermata.
+
+I computer (categoria Computer: C64, Amiga, Spectrum, MSX...) si aprono direttamente nelle loro
+cartelle vere, non per titolo: le loro raccolte hanno nomi liberi e cartelle che contano. Ogni
+sistema si passa dall'uno all'altro modo in *Frontier Settings → Systems view*
+(`view_folders=` e `view_titles=` in `frontier.ini`; `view=folders|titles` in `systems.ini`
+cambia il comportamento di base).
 
 ## Core con piu' configurazioni (Amiga)
 

@@ -15,7 +15,7 @@ themeable graphical front end drawn on the framebuffer. Everything else
   Wikipedia, by a scraper that also runs from the settings screen.
 * Favorites, Recent games, My Lists (by hand or from a filter on the metadata).
 * Themes in plain `.ini` files (City Pop in three colours and Simple are
-  included), a theme editor (one standalone file for the PC, [`theme_editor.html`](https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html) on the Releases page) and a step by step
+  included), a theme editor (one standalone file for the PC, [`theme_editor.html`](https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html) on the Releases page, also as a program for Windows, macOS and Linux) and a step by step
   theme guide.
 * Screensaver with random games, loading screens drawn by the theme, Coin-Op
   mode (last game at power on, panic combo), CRT output next to HDMI.
@@ -172,7 +172,8 @@ Settings -> CRT Geometry.
   * [A game shows a black screen](docs/BLACK_SCREEN.md): how to get the MiSTer
     back, the usual causes ([italiano](docs/BLACK_SCREEN_ita.md)).
   * [Theme editor](docs/THEME_EDITOR.md): make a theme on the PC with the
-    standalone `theme_editor.html` ([italiano](docs/THEME_EDITOR_ita.md)).
+    standalone `theme_editor.html` or the program for Windows, macOS and Linux
+    ([italiano](docs/THEME_EDITOR_ita.md)).
 * Theme guide: [THEME_GUIDE.txt](tools/fe/sd/frontier/THEME_GUIDE.txt)
   (Italian: [GUIDA_TEMA_ita.txt](tools/fe/sd/frontier/GUIDA_TEMA_ita.txt)).
 * How Frontier stays installed through updates and how to go back to the

@@ -53,20 +53,33 @@ def run_downloader(root):
     return main(env, time.monotonic(), ['downloader'])
 
 
-def fixture(root, registered):
-    """SD after an older Frontier install: filter with !menu, Frontier's menu in the root."""
+DB9_URL = 'https://fixture.invalid/MiSTer-DB9/dbencc.json'  # matched by protect_updates.DB_DEFAULT_FILTERS
+UNSTABLE = '_Unstable/_Test/Test_unstable_20261029.rbf'
+
+
+def fixture(root, registered, db9=False):
+    """SD after an older Frontier install: filter with !menu, Frontier's menu in the root.
+    db9: distribution_mister is MiSTer-DB9's, with unstable cores left out by its default filter."""
     server = root / 'server'
     server.mkdir()
     files = {}
-    for name, tags, data in [('MiSTer', ['essential', 'misterfirmware'], OFFICIAL),
-                             ('menu.rbf', ['essential', 'cores', 'menu'], b'official-menu'),
-                             ('_Console/Test_20261022.rbf', ['console'], b'new-core')]:
+    entries = [('MiSTer', ['essential', 'misterfirmware'], OFFICIAL),
+               ('menu.rbf', ['essential', 'cores', 'menu'], b'official-menu'),
+               ('_Console/Test_20261022.rbf', ['console'], b'new-core')]
+    if db9:
+        entries.append((UNSTABLE, ['unstable', 'unstable-test'], b'unstable-core'))
+    for name, tags, data in entries:
         (server / Path(name).name).write_bytes(data)
         files[name] = dict(hash=make_db.hashlib.md5(data).hexdigest(), size=len(data), tags=tags,
                            path='system' if '/' not in name else 'standard',
                            url='https://fixture.invalid/' + Path(name).name)
     db = dict(v=1, db_id='distribution_mister', timestamp=int(time.time()),
               files=files, folders={'_Console': {'tags': ['console']}})
+    if db9:
+        db['folders'].update({'_Unstable': {'tags': ['unstable']}, '_Unstable/_Test': {'tags': ['unstable', 'unstable-test']}})
+        db['default_options'] = {'filter': '!unstable !jtbeta !dualsdram'}
+        (server / 'MiSTer-DB9').mkdir()
+        (server / 'MiSTer-DB9/dbencc.json').write_text(json.dumps(db))
     (server / 'db.json').write_text(json.dumps(db))
 
     # Frontier's published tree and database (version 2)
@@ -112,13 +125,13 @@ def fixture(root, registered):
     store = {'migration_version': 13, 'internal': True, 'db_fingerprints': {},
              'dbs': {'distribution_mister': dict(files=owned, folders={'_Console': {}}, zips={}, base_path=str(root))}}
     (cache / 'downloader.json').write_text(json.dumps(store))
-    write_ini(root, '!misterfirmware !menu')
+    write_ini(root, '!misterfirmware !menu', db9)
 
 
-def write_ini(root, filter_value):
+def write_ini(root, filter_value, db9=False):
     (root / 'downloader.ini').write_text(
         '[MiSTer]\nupdate_linux=false\nallow_reboot=0\nstorage_priority=off\nfile_checking=verify_integrity\n\n'
-        '[distribution_mister]\ndb_url=https://fixture.invalid/db.json\n' +
+        '[distribution_mister]\ndb_url=' + (DB9_URL if db9 else 'https://fixture.invalid/db.json') + '\n' +
         ('filter=%s\n' % filter_value if filter_value is not None else ''))
 
 
@@ -159,9 +172,9 @@ def check(root, label, expected):
     assert got == expected, (label, got, expected)
 
 
-def scenario(name, registered=False):
+def scenario(name, registered=False, db9=False):
     root = Path(tempfile.mkdtemp(prefix='frontier-updater-' + name + '-'))
-    fixture(root, registered)
+    fixture(root, registered, db9)
     print('==', name, root, flush=True)
     return root
 
@@ -255,4 +268,27 @@ if __name__ == '__main__':
     check(root, 'archive database: same files kept', {
         'frontier/bin/MiSTer': FRONTIER_2, 'frontier/guard.sh': GUARD.read_bytes(),
         'frontier/frontier.ini': b'theme=user\n', 'Scripts/frontier_on_off.sh': b'#!/bin/sh\n'})
+
+    # MiSTer-DB9: its database leaves out the unstable cores by itself, but only while its section
+    # has no filter. The filter of older Frontier versions got them all; protect_updates.py keeps the
+    # default of the database, also when it repairs that older filter at boot.
+    root = scenario('db9_no_filter', db9=True)
+    write_ini(root, None, db9=True)
+    update(root, 'run')
+    check(root, 'DB9 without a filter: no unstable cores', {UNSTABLE: None})
+    root = scenario('db9_old_filter', db9=True)
+    write_ini(root, '[MiSTer] !misterfirmware', db9=True)
+    update(root, 'run1')
+    check(root, 'DB9 with the old filter: unstable cores downloaded', {UNSTABLE: b'unstable-core'})
+    protect(root, '--repair')
+    assert 'filter=[MiSTer] !unstable !jtbeta !dualsdram !misterfirmware\n' in (root / 'downloader.ini').read_text(), \
+        (root / 'downloader.ini').read_text()
+    update(root, 'run2')
+    check(root, 'DB9 repaired filter: unstable cores removed, MiSTer kept',
+          {UNSTABLE: None, 'MiSTer': FRONTIER_1, 'menu.rbf': b'official-menu'})
+    root = scenario('db9_protected', db9=True)
+    write_ini(root, None, db9=True)
+    protect(root)
+    update(root, 'run')
+    check(root, 'DB9 protected: no unstable cores, MiSTer kept', {UNSTABLE: None, 'MiSTer': FRONTIER_1})
     print('All scenarios passed.')

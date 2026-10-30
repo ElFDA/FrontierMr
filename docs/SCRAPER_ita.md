@@ -37,7 +37,7 @@ ScreenScraper viene saltato e si usano le altre fonti:
 |---|---|---|
 | Fonte | ArcadeDB | libretro thumbnails |
 | Dati (descrizione, genere...) | sì | no |
-| Copertine, schermate, schermate del titolo | sì | sì, solo per i file con nome No-Intro esatto |
+| Copertine, schermate, schermate del titolo | sì | sì: col nome del file, altrimenti col titolo del gioco (nomi TOSEC, hack, altre revisioni; l'immagine dello stesso anno ed editore, o della regione preferita) |
 | Marquee, video | sì | no |
 
 I dati dei sistemi (descrizione, produttore, anno, hardware) arrivano sempre

@@ -25,11 +25,22 @@ panels on multiples of 3.
 
 
 STEP 0 - WHAT YOU NEED
-  - a PC with Chrome or Edge (they can save straight into the folder;
-    with other browsers use "Download .ini" and copy the files yourself)
-  - the editor: the file theme_editor.html from the Releases page of FrontierMr
-    (https://github.com/ElFDA/FrontierMr/releases/latest/download/theme_editor.html),
-    open it with a double click, it works offline
+  - the editor, one of the two (they do the same, offline), from the
+    Releases page of FrontierMr (https://github.com/ElFDA/FrontierMr/releases/latest):
+    - the program FrontierThemeEditor for Windows, macOS (Apple Silicon) or
+      Linux, nothing to install (see docs/THEME_EDITOR.md for the first start);
+    - or the web page theme_editor.html, opened with Chrome or Edge with a
+      double click (they save straight into the folder; with other browsers
+      use "Download .ini" and copy the files yourself)
+  The steps name the buttons of the web page; in the program they are:
+    Open folder      File > Open folder (or drop the folder on the window)
+    Save to folder   File > Save (Ctrl+S)
+    Variant          16:9 | 4:3 and the screen menu in the top bar
+    Make 4:3         Make 4:3 in the top bar (also in the Variant menu)
+    Make detail      Variant > Make detail
+    Import .ini      File > Load .ini
+    240p preview     240p preview in the top bar
+    Delete           the Del key (Edit > Delete layer)
   - the pictures and fonts of City Pop: from tools/fe/sd/frontier/themes/
     or from /media/fat/frontier/themes/ on the MiSTer
 

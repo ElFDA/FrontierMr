@@ -38,7 +38,7 @@ ScreenScraper is skipped and the other sources are used:
 |---|---|---|
 | Source | ArcadeDB | libretro thumbnails |
 | Data (description, genre...) | yes | no |
-| Box art, screenshots, title screens | yes | yes, only for files with exact No-Intro names |
+| Box art, screenshots, title screens | yes | yes: by the name of the file, or else by the title of the game (TOSEC names, hacks, other revisions; the picture of the same year and publisher, or of the preferred region) |
 | Marquees, videos | yes | no |
 
 The data of the systems (description, maker, year, hardware) always come from

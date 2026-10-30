@@ -11,9 +11,10 @@ In quest'ordine; per lo stesso file in due posti vale il primo:
 | Posto | Cos'è |
 |---|---|
 | `/media/fat/games` | la SD, oppure il disco a cui è collegata |
-| `/media/usb0/games` ... `/media/usb7/games` | i dischi USB, ognuno con una cartella `games` |
+| `/media/usb0/games` ... `/media/usb7/games` e `/media/usb0` ... `/media/usb7` | i dischi USB: le cartelle dei sistemi in una cartella `games`, oppure direttamente sul disco (`/media/usb0/SNES`, come le legge anche il browser del MiSTer) |
 | `/media/network/games` e `/media/network` | condivisioni di rete |
 | `/media/fat/cifs/games` e `/media/fat/cifs` | condivisioni CIFS montate dallo script `cifs_mount.sh` (le sue condivisioni possono contenere direttamente le cartelle dei sistemi: `Amiga`, `C64`, `NES`...) |
+| `/media/fat` | la vecchia disposizione con le cartelle dei sistemi direttamente sulla SD (`/media/fat/SNES`) |
 
 Un disco a cui `games` è già collegata non si legge due volte. In ogni posto la cartella del
 sistema è quella di sempre (`games/PSX`, `games/SNES`...); maiuscole e minuscole non contano
@@ -39,4 +40,8 @@ sistema è quella di sempre (`games/PSX`, `games/SNES`...); maiuscole e minuscol
   un sistema (vedi *AGGIORNARE GLI ELENCHI* in `LEGGIMI_ita.txt`).
 * Una condivisione di rete lenta o spenta rallenta gli elenchi: smontarla (`cifs_umount.sh`)
   oppure `merge_games=0`, che legge solo `/media/fat/games`.
-* Le cartelle dei sistemi direttamente in `/media/usbN` (senza cartella `games`) non si leggono.
+* **Storage: USB** nell'OSD del MiSTer (System Settings) fa del primo disco USB la radice:
+  `/media/usb0` prende il posto di `/media/fat` nella tabella sopra e la SD si legge per ultima
+  (`/media/fat/games`, poi `/media/fat`). La cartella di Frontier resta sulla SD
+  (`/media/fat/frontier`, dove la mette l'installazione), a meno che il disco USB non abbia una
+  sua cartella `frontier`.

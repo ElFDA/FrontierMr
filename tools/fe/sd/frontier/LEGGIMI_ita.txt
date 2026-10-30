@@ -98,6 +98,15 @@ IMPOSTAZIONI DI FRONTIER (ultima voce della prima schermata)
                       recenti restano); una categoria con tutti i sistemi
                       nascosti sparisce. Scritto in frontier.ini:
                       hidden=NES,_Arcade...
+  Systems view        come si apre ogni sistema: le categorie, poi dentro una
+                      categoria A (o Sinistra/Destra) su un sistema =
+                      Titles/Folders. Titles: un solo elenco di tutti i suoi
+                      giochi per titolo (console e portatili, di base);
+                      Folders: le sue cartelle vere come sono sul disco, come
+                      le mostra il MiSTer (i computer, di base: le loro
+                      raccolte hanno nomi liberi e cartelle che contano).
+                      Scritto in frontier.ini: view_folders=PSX,
+                      view_titles=Amiga...
   Coin-Op mode        A oppure Sinistra/Destra: ON/OFF (vedi MODALITA' COIN-OP)
   CRT output          A oppure Sinistra/Destra: ON/OFF, Frontier anche sul CRT
                       dell'uscita VGA (crt=1, vedi USCITE VIDEO); anche da
@@ -261,10 +270,15 @@ GIOCHI SU PIU' DISCHI E CONDIVISIONI DI RETE
   il primo):
     /media/fat/games            la SD, oppure il disco a cui e' collegata
     /media/usb0 ... usb7/games  i dischi USB, ognuno con una cartella games
+    /media/usb0 ... usb7        gli stessi dischi con le cartelle dei sistemi
+                                direttamente sopra (/media/usb0/SNES), come le
+                                legge il MiSTer
     /media/network/games        condivisioni di rete (anche /media/network)
     /media/fat/cifs/games       condivisioni CIFS montate da cifs_mount.sh
                                 (anche /media/fat/cifs stesso, con le cartelle
                                 dei sistemi dentro: Amiga, C64, NES...)
+    /media/fat                  la vecchia disposizione, cartelle dei sistemi
+                                direttamente sulla SD (/media/fat/SNES)
   In ognuno la cartella del sistema e' quella di sempre (games/PSX, games/
   SNES...; maiuscole e minuscole non contano). Anche un sistema presente solo
   su un secondo disco compare. Le cartelle dello stesso sistema si
@@ -280,8 +294,11 @@ GIOCHI SU PIU' DISCHI E CONDIVISIONI DI RETE
   gli elenchi (X tenuto su una categoria o su un sistema, vedi AGGIORNARE GLI
   ELENCHI). Una condivisione lenta o spenta rallenta gli elenchi: smontarla
   (cifs_umount.sh) oppure merge_games=0. Lo scraper (fe_scrape.py) legge gli
-  stessi posti. Le cartelle col nome di un sistema direttamente in
-  /media/usbN (senza cartella games) non si leggono.
+  stessi posti.
+  Storage: USB nell'OSD del MiSTer (System Settings) fa del primo disco USB
+  la radice: /media/usb0 prende il posto di /media/fat nell'elenco sopra e la
+  SD si legge per ultima (/media/fat/games, poi /media/fat). La cartella di
+  Frontier resta /media/fat/frontier, a meno che il disco USB non ne abbia una.
 
 MODALITA' COIN-OP (riparte l'ultimo gioco all'accensione)
   Come un cabinato: accendendo il MiSTer riparte da solo l'ultimo gioco
@@ -332,7 +349,12 @@ AGGIORNARE GLI ELENCHI (dopo aver aggiunto o tolto giochi o core)
 GIOCHI PER SISTEMA
   Computer, Console, Handheld e Other elencano le cartelle di
   /media/fat/games che hanno file e un core installato.
-  Dentro un sistema c'e' un solo elenco con tutti i giochi delle sue
+  I computer (C64, Amiga, Spectrum, MSX...) si aprono nelle loro cartelle
+  vere, come le mostra il MiSTer: uno zip si apre come una cartella, i file
+  hanno i loro nomi. Console e portatili si aprono nei giochi per titolo,
+  come sotto. Ogni sistema si cambia da Frontier Settings -> Systems view (o
+  con view= in systems.ini, per tutti).
+  Dentro un sistema per titolo c'e' un solo elenco con tutti i giochi delle sue
   sottocartelle (1 US, 2 Europe, 2 Japan...). Ogni file con un'estensione del
   sistema e' un gioco, qualunque sia il nome. I file con la regione nel nome
   alla No-Intro, es. "Altered Beast (USA, Europe).md", sono una voce per titolo
@@ -341,6 +363,9 @@ GIOCHI PER SISTEMA
   spazi, senza "[!]", senza il numero del disco ("Spyro (Disc 1)" e "Spyro
   (Disc 2)" sono un solo gioco, "Spyro", i dischi sono le sue versioni). I
   codici dei paesi di GoodTools (U), (E), (J), (UE)... contano come regioni.
+  Di un nome TOSEC conta solo il titolo: "Predator 2 (1991)(ImageWorks)(Disk
+  1 of 2)[cr CPY]", il suo disco 2 e le altre copie sono un solo gioco,
+  "Predator 2", che avvia il primo disco della copia con meno tag [...].
   La data davanti al nome (raccolte per data) non conta. I BIOS chiamati
   "[BIOS] ..." non si elencano. File e cartelle col nome che inizia con @ ("@C64 2023-4-28.zip")
   vanno come gli altri.
@@ -526,7 +551,10 @@ SCRAPER (dati e immagini)
   in /media/fat/frontier/scraper.ini o accanto all'esempio e scrivere user e
   password; le credenziali "developer" di Frontier sono nello scraper), ArcadeDB (arcade e
   Neo Geo: quello che ScreenScraper non ha, o tutto senza il suo account),
-  libretro-thumbnails (immagini). Altro ordine: --sources adb,ss,libretro.
+  libretro-thumbnails (immagini: col nome del file, altrimenti col titolo del
+  gioco, cosi' anche i nomi TOSEC e gli hack le hanno). Altro ordine:
+  --sources adb,ss,libretro. Anche gli zip con dentro giochi dai nomi liberi
+  (raccolte TOSEC) vengono letti, fino a 3000 giochi per sistema.
   Sul PC con la SD montata: aggiungere --root <percorso della SD>; con
   Pillow le immagini vengono anche rimpicciolite.
   Interrompere lo scraper (Ctrl+C) e' sicuro: rilanciandolo riprende da dove era.
@@ -606,6 +634,9 @@ AGGIORNAMENTI (update_all / downloader)
     evita di scaricare per niente il MiSTer ufficiale. Se un aggiornamento
     riscrive downloader.ini o user-startup.sh, Frontier rimette le sue righe
     all'avvio successivo (log: frontier/update_protection.log).
+    Con MiSTer-DB9 il filtro tiene anche cio' che il suo database esclude di
+    base (!unstable !jtbeta !dualsdram): niente core unstable. Per averli,
+    scrivere il proprio filtro nella sezione [MiSTer] di downloader.ini.
   - Aggiornamenti di Frontier: /media/fat/downloader_frontiermr.ini (lo
     mette frontier_install) fa scaricare a update_all ogni release nuova e ne
     prende i file di frontier/ e gli script frontier_* (frontier.ini,
@@ -803,6 +834,14 @@ CREARE UN TEMA
   e si apre con Chrome o Edge, "Open folder" su una copia di themes/simple, modificare, "Save to folder",
   copiare la cartella in /media/fat/frontier/themes/, mettere
   theme=<nome> in frontier.ini e premere F5.
+  L'editor e' anche un programma per Windows, macOS (Apple Silicon) e Linux,
+  senza niente da installare, nella stessa pagina Releases:
+  FrontierThemeEditor-windows.exe, FrontierThemeEditor-macos.zip,
+  FrontierThemeEditor-linux.tar.gz (non e' firmato: la prima volta Windows
+  vuole "Ulteriori informazioni -> Esegui comunque", macOS clic destro -> Apri).
+  Ha le stesse funzioni, nei menu: File > Apri cartella / Salva / Carica
+  .ini, "Crea 4:3" nella barra in alto, Variante > Crea dettaglio / Crea
+  screensaver.
   L'editor modifica theme.ini, theme_43.ini, detail.ini, detail_43.ini,
   screensaver.ini e screensaver_43.ini ("Variant"; "Make 4:3", "Make detail"
   e "Make screensaver" creano quelli che mancano) e
